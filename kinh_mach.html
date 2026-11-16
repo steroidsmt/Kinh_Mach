@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bản Đồ Huyệt Đạo 3D Toàn Diện - 14 Kinh Mạch & Kỳ Huyệt</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Three.js & OrbitControls (r128) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #050a14;
+      color: #f1f5f9;
+      user-select: none;
+    }
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+    #labels-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 10;
+      overflow: hidden;
+    }
+    .point-label {
+      position: absolute;
+      transform: translate(-50%, -140%);
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: rgba(8, 15, 29, 0.86);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #f8fafc;
+      font-size: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+      pointer-events: none;
+      transition: opacity 0.12s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    }
+    .glass-panel {
+      background: rgba(10, 17, 30, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+    }
+    .glow-cyan {
+      box-shadow: 0 0 22px rgba(34, 211, 238, 0.25);
+    }
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.4);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.35);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(56, 189, 248, 0.65);
+    }
+    input[type="range"] {
+      accent-color: #22d3ee;
+    }
+  </style>
+</head>
+<body>
+  <!-- 3D Canvas -->
+  <div id="canvas-container"></div>
+
+  <!-- Dynamic 2D Floating Labels Layer -->
+  <div id="labels-layer"></div>
+
+  <!-- Hover Tooltip -->
+  <div
+    id="hover-tooltip"
+    class="pointer-events-none fixed z-50 hidden rounded-xl bg-slate-950/95 border border-cyan-400/60 px-3 py-2 text-xs shadow-2xl backdrop-blur-md"
+  >
+    <div class="flex items-center gap-2">
+      <span id="tooltip-dot" class="h-2.5 w-2.5 rounded-full bg-cyan-400"></span>
+      <span id="tooltip-code" class="font-bold text-cyan-300">ST36</span>
+      <span id="tooltip-name" class="font-semibold text-white">Túc Tam Lý</span>
+      <span id="tooltip-side" class="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-300">Trái</span>
+    </div>
+    <div id="tooltip-meridian" class="mt-0.5 text-[11px] text-slate-400">Túc Dương Minh Vị Kinh</div>
+  </div>
+
+  <!-- Top Navigation Header -->
+  <header class="pointer-events-none fixed top-0 left-0 right-0 z-30 flex items-center justify-between gap-2 p-3 sm:px-4 sm:py-3">
+    <div class="pointer-events-auto glass-panel flex items-center gap-3 rounded-2xl px-3.5 py-2">
+      <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-300">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="4.5" r="2" />
+          <path d="M12 7v8.5M7.5 10h9M9.5 21l2.5-5.5 2.5 5.5" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="12" cy="11" r="1.2" fill="currentColor" />
+        </svg>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-sm sm:text-base font-bold tracking-tight text-white">
+            Bản Đồ Huyệt Đạo 3D Toàn Diện
+          </h1>
+          <span id="total-nodes-badge" class="hidden sm:inline-block rounded-full bg-cyan-500/20 border border-cyan-400/40 px-2 py-0.5 text-[10px] font-semibold text-cyan-300">
+            135 Huyệt • 246 Điểm
+          </span>
+        </div>
+        <p class="text-[11px] text-slate-400">14 Kinh Mạch Chính &amp; Kỳ Huyệt Đông Y</p>
+      </div>
+    </div>
+
+    <!-- Quick Action Controls & Mobile Toggles -->
+    <div class="flex items-center gap-2 pointer-events-auto">
+      <button id="btn-toggle-pts" class="glass-panel hidden sm:flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20 transition">
+        <span>🔘 Ẩn/Hiện Huyệt</span>
+      </button>
+      <button id="btn-toggle-mer" class="glass-panel hidden sm:flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20 transition">
+        <span>〰️ Ẩn/Hiện Kinh Mạch</span>
+      </button>
+      <button id="btn-reset-cam" class="glass-panel flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20 transition" title="Reset góc nhìn toàn thân trước">
+        <span>🏠 Reset Góc Nhìn</span>
+      </button>
+      <div class="flex items-center gap-2 sm:hidden">
+        <button id="btn-mobile-left" class="glass-panel flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-cyan-300">
+          <span>Kinh Mạch</span>
+        </button>
+        <button id="btn-mobile-right" class="glass-panel flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-cyan-300">
+          <span>Tra cứu</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- LEFT PANEL: 15 Meridian Filters & Anatomical Controls -->
+  <aside
+    id="left-panel"
+    class="glass-panel fixed top-16 sm:top-20 bottom-14 left-3 z-20 hidden w-[310px] sm:w-[330px] flex-col rounded-2xl p-3 lg:flex"
+  >
+    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+      <h2 class="text-xs font-bold uppercase tracking-wider text-cyan-300">Hệ thống Kinh Mạch</h2>
+      <div class="flex gap-1">
+        <button id="btn-meridian-all" class="rounded bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-200">Chọn hết</button>
+        <button id="btn-meridian-none" class="rounded bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-400">Bỏ chọn</button>
+      </div>
+    </div>
+
+    <!-- Meridian List -->
+    <div id="meridian-filter-list" class="mt-2 flex-1 space-y-1 overflow-y-auto pr-1">
+      <!-- Populated dynamically -->
+    </div>
+
+    <!-- Anatomical Display Settings -->
+    <div class="mt-2.5 border-t border-slate-800 pt-2.5 shrink-0 space-y-2">
+      <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Hiển thị giải phẫu</div>
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-slate-300">Đối xứng cơ thể</span>
+        <div class="flex rounded-lg bg-slate-950 p-0.5 border border-slate-800">
+          <button id="btn-sym-both" class="rounded-md bg-cyan-500 px-2 py-1 text-[11px] font-semibold text-slate-950 transition">2 Bên</button>
+          <button id="btn-sym-single" class="rounded-md px-2 py-1 text-[11px] font-medium text-slate-400 hover:text-white transition">1 Bên</button>
+        </div>
+      </div>
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-slate-300">Đường kinh lạc</span>
+        <label class="relative inline-flex cursor-pointer items-center">
+          <input id="chk-meridians" type="checkbox" checked class="peer sr-only" />
+          <div class="h-5 w-9 rounded-full bg-slate-800 peer-checked:bg-cyan-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all"></div>
+        </label>
+      </div>
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-slate-300">Tên huyệt nổi 3D</span>
+        <label class="relative inline-flex cursor-pointer items-center">
+          <input id="chk-labels" type="checkbox" class="peer sr-only" />
+          <div class="h-5 w-9 rounded-full bg-slate-800 peer-checked:bg-cyan-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all"></div>
+        </label>
+      </div>
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-slate-300">Tự động xoay 360°</span>
+        <label class="relative inline-flex cursor-pointer items-center">
+          <input id="chk-autorotate" type="checkbox" class="peer sr-only" />
+          <div class="h-5 w-9 rounded-full bg-slate-800 peer-checked:bg-cyan-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all"></div>
+        </label>
+      </div>
+      <div class="space-y-1">
+        <div class="flex justify-between text-[11px]">
+          <span class="text-slate-300">Độ trong suốt cơ thể</span>
+          <span id="opacity-val" class="font-semibold text-cyan-300">30%</span>
+        </div>
+        <input id="slider-opacity" type="range" min="0.05" max="0.75" step="0.05" value="0.30" class="w-full" />
+      </div>
+    </div>
+  </aside>
+
+  <!-- RIGHT PANEL: Smart Search, Acupoint List & Medical Dossier -->
+  <aside
+    id="right-panel"
+    class="glass-panel fixed top-16 sm:top-20 bottom-14 right-3 z-20 hidden w-[340px] sm:w-[420px] flex-col rounded-2xl p-3 lg:flex"
+  >
+    <!-- Search Bar -->
+    <div class="relative shrink-0">
+      <svg class="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+      </svg>
+      <input
+        id="search-input"
+        type="text"
+        placeholder="Tìm tên, Hán tự, mã (ST36), thần kinh, triệu chứng..."
+        class="w-full rounded-xl bg-slate-950/90 border border-slate-700/90 pl-9 pr-8 py-2 text-xs text-white placeholder-slate-400 focus:border-cyan-400 focus:outline-none"
+      />
+      <button id="btn-clear-search" class="hidden absolute right-2.5 top-2 text-xs text-slate-400 hover:text-white">✕</button>
+    </div>
+
+    <!-- MEDICAL ACUPOINT DOSSIER CARD (Hồ sơ Y khoa chuyên sâu) -->
+    <div id="detail-card" class="mt-2.5 hidden flex-col rounded-xl bg-slate-900/95 border border-cyan-500/50 p-3 glow-cyan max-h-[68%] shrink-0">
+      <!-- Dossier Header -->
+      <div class="flex items-start justify-between gap-2 shrink-0">
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span id="detail-code" class="rounded-md bg-cyan-500/20 border border-cyan-400/50 px-2 py-0.5 text-xs font-bold text-cyan-300">ST36</span>
+            <span id="detail-special" class="rounded-md bg-amber-500/15 border border-amber-400/40 px-2 py-0.5 text-[10px] font-semibold text-amber-300">Hợp huyệt (Thổ)</span>
+          </div>
+          <div class="mt-1 flex items-baseline gap-2">
+            <h2 id="detail-name" class="text-base font-bold text-white truncate">Túc Tam Lý</h2>
+            <span id="detail-hanzi" class="text-sm font-semibold text-cyan-200/90 shrink-0">足三里</span>
+          </div>
+          <p id="detail-meridian" class="text-[11px] font-medium text-cyan-400 truncate">Túc Dương Minh Vị Kinh</p>
+        </div>
+        <button id="btn-close-detail" class="rounded-lg bg-slate-800 p-1.5 text-slate-400 hover:text-white shrink-0" title="Đóng hồ sơ y khoa">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- 3 Medical Tabs -->
+      <div class="mt-2.5 grid grid-cols-3 gap-1 rounded-lg bg-slate-950 p-1 border border-slate-800 shrink-0 text-[11px] font-semibold">
+        <button data-tab="anatomy" class="dossier-tab rounded-md bg-cyan-500 text-slate-950 py-1 transition">
+          Giải phẫu
+        </button>
+        <button data-tab="clinical" class="dossier-tab rounded-md text-slate-400 hover:text-white py-1 transition">
+          Lâm sàng
+        </button>
+        <button data-tab="procedure" class="dossier-tab rounded-md text-slate-400 hover:text-white py-1 transition">
+          Thủ thuật
+        </button>
+      </div>
+
+      <!-- Scrollable Tab Content Area -->
+      <div class="mt-2.5 flex-1 overflow-y-auto pr-1 text-xs leading-relaxed space-y-2.5">
+        <!-- TAB 1: GIẢI PHẪU & THẦN KINH - MẠCH MÁU -->
+        <div id="tab-panel-anatomy" class="dossier-panel space-y-2">
+          <div class="rounded-lg bg-slate-950/75 border border-slate-800/90 p-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-cyan-400">📍 Mốc giải phẫu &amp; Cách đo Thốn (Cun):</span>
+            <p id="med-location" class="text-slate-200 mt-0.5"></p>
+          </div>
+          <div class="rounded-lg bg-slate-950/75 border border-slate-800/90 p-2 space-y-1.5">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400">🧬 Cấu trúc giải phẫu lớp sâu:</span>
+            <div>
+              <span class="text-[11px] font-semibold text-slate-400">Lớp cơ &amp; gân: </span>
+              <span id="med-muscles" class="text-slate-200"></span>
+            </div>
+            <div>
+              <span class="text-[11px] font-semibold text-slate-400">Thần kinh chi phối: </span>
+              <span id="med-nerves" class="text-amber-200/95"></span>
+            </div>
+            <div>
+              <span class="text-[11px] font-semibold text-slate-400">Mạch máu lân cận: </span>
+              <span id="med-vessels" class="text-rose-300/95"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: CÔNG NĂNG ĐÔNG Y & CHỈ ĐỊNH LÂM SÀNG -->
+        <div id="tab-panel-clinical" class="dossier-panel hidden space-y-2">
+          <div class="rounded-lg bg-slate-950/75 border border-slate-800/90 p-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400">☯️ Công năng Y học cổ truyền:</span>
+            <p id="med-tcm-action" class="text-slate-200 mt-0.5"></p>
+          </div>
+          <div class="rounded-lg bg-slate-950/75 border border-slate-800/90 p-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-cyan-400">🩺 Chỉ định điều trị triệu chứng &amp; bệnh lý:</span>
+            <p id="med-indications" class="text-slate-200 mt-0.5"></p>
+          </div>
+          <div class="rounded-lg bg-slate-950/75 border border-slate-800/90 p-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400">🔬 Cơ chế sinh học (Thần kinh - Thể dịch):</span>
+            <p id="med-mechanism" class="text-slate-300 mt-0.5"></p>
+          </div>
+        </div>
+
+        <!-- TAB 3: THỦ THUẬT DAY BẤM, CHÂM CỨU, PHỐI HUYỆT & AN TOÀN -->
+        <div id="tab-panel-procedure" class="dossier-panel hidden space-y-2">
+          <div class="rounded-lg bg-slate-950/75 border border-slate-800/90 p-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400">👐 Hướng dẫn tự Day bấm huyệt tại nhà:</span>
+            <p id="med-acupressure" class="text-slate-200 mt-0.5"></p>
+          </div>
+          <div class="rounded-lg bg-slate-950/75 border border-slate-800/90 p-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-sky-400">💉 Thông số Châm cứu &amp; Cứu ngải (Tham khảo):</span>
+            <p id="med-needling" class="text-slate-200 mt-0.5"></p>
+          </div>
+          <div class="rounded-lg bg-slate-950/75 border border-slate-800/90 p-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-purple-400">🔗 Phối huyệt kinh điển (Nhấp để nhảy tới huyệt):</span>
+            <div id="med-combos" class="mt-1.5 space-y-1.5"></div>
+          </div>
+          <div class="rounded-lg bg-rose-950/45 border border-rose-500/45 p-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-rose-400">⚠️ Chống chỉ định &amp; Lưu ý an toàn y khoa:</span>
+            <p id="med-caution" class="text-rose-100 mt-0.5"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Footer + Medical Disclaimer -->
+      <div class="mt-2 pt-2 border-t border-slate-800 shrink-0 space-y-1.5">
+        <div class="flex items-center gap-1.5">
+          <button id="btn-prev-pt" class="flex-1 rounded-lg bg-slate-800 hover:bg-slate-700 py-1.5 text-[11px] font-medium text-slate-200 transition">← Huyệt trước</button>
+          <button id="btn-refocus-pt" class="rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 px-2.5 py-1.5 text-[11px] font-semibold text-cyan-300 transition">Soi gần 3D</button>
+          <button id="btn-next-pt" class="flex-1 rounded-lg bg-slate-800 hover:bg-slate-700 py-1.5 text-[11px] font-medium text-slate-200 transition">Huyệt sau →</button>
+        </div>
+        <p class="text-[10px] text-slate-500 text-center leading-tight">
+          Lưu ý: Thông tin phục vụ tra cứu học thuật &amp; tự xoa bóp nhẹ. Châm cứu cần thực hiện bởi bác sĩ Y học cổ truyền.
+        </p>
+      </div>
+    </div>
+
+    <!-- List Counter -->
+    <div class="mt-2.5 flex items-center justify-between px-1 text-[11px] text-slate-400 shrink-0">
+      <span>Danh mục huyệt vị</span>
+      <span id="filtered-count" class="font-semibold text-cyan-300">135 huyệt</span>
+    </div>
+
+    <!-- Filtered Acupoints List -->
+    <div id="acupoint-list" class="mt-1.5 flex-1 space-y-1.5 overflow-y-auto pr-1">
+      <!-- Populated dynamically -->
+    </div>
+  </aside>
+
+  <!-- BOTTOM CAMERA PRESETS BAR -->
+  <footer class="pointer-events-none fixed bottom-2.5 left-0 right-0 z-30 flex justify-center px-2">
+    <div class="pointer-events-auto glass-panel flex flex-wrap items-center justify-center gap-1 rounded-2xl p-1.5">
+      <button data-view="front" class="cam-btn rounded-xl bg-slate-800/90 hover:bg-cyan-500/25 hover:text-cyan-300 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition">
+        Toàn thân trước
+      </button>
+      <button data-view="back" class="cam-btn rounded-xl bg-slate-800/90 hover:bg-cyan-500/25 hover:text-cyan-300 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition">
+        Toàn thân sau
+      </button>
+      <button data-view="head" class="cam-btn rounded-xl bg-slate-800/90 hover:bg-cyan-500/25 hover:text-cyan-300 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition">
+        Đầu &amp; Mặt
+      </button>
+      <button data-view="torso" class="cam-btn rounded-xl bg-slate-800/90 hover:bg-cyan-500/25 hover:text-cyan-300 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition">
+        Thân mình
+      </button>
+      <button data-view="arms" class="cam-btn rounded-xl bg-slate-800/90 hover:bg-cyan-500/25 hover:text-cyan-300 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition">
+        Tay &amp; Bàn tay
+      </button>
+      <button data-view="legs" class="cam-btn rounded-xl bg-slate-800/90 hover:bg-cyan-500/25 hover:text-cyan-300 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition">
+        Chân &amp; Bàn chân
+      </button>
+    </div>
+  </footer>
+
+  <script>
+    // =========================================================================
+    // 1. ĐỊNH NGHĨA 15 NHÓM KINH MẠCH (12 CHÍNH KINH + NHÂM + ĐỐC + KỲ HUYỆT)
+    // =========================================================================
+    const MERIDIANS_META = [
+      { id: "LU", name: "Thủ Thái Âm Phế Kinh", short: "Phế (LU)", color: "#38bdf8", hex: 0x38bdf8, bilateral: true },
+      { id: "LI", name: "Thủ Dương Minh Đại Trường", short: "Đại Trường (LI)", color: "#fbbf24", hex: 0xfbbf24, bilateral: true },
+      { id: "ST", name: "Túc Dương Minh Vị Kinh", short: "Vị (ST)", color: "#f97316", hex: 0xf97316, bilateral: true },
+      { id: "SP", name: "Túc Thái Âm Tỳ Kinh", short: "Tỳ (SP)", color: "#eab308", hex: 0xeab308, bilateral: true },
+      { id: "HT", name: "Thủ Thiếu Âm Tâm Kinh", short: "Tâm (HT)", color: "#f43f5e", hex: 0xf43f5e, bilateral: true },
+      { id: "SI", name: "Thủ Thái Dương Tiểu Trường", short: "Tiểu Trường (SI)", color: "#fb7185", hex: 0xfb7185, bilateral: true },
+      { id: "BL", name: "Túc Thái Dương Bàng Quang", short: "Bàng Quang (BL)", color: "#60a5fa", hex: 0x60a5fa, bilateral: true },
+      { id: "KI", name: "Túc Thiếu Âm Thận Kinh", short: "Thận (KI)", color: "#818cf8", hex: 0x818cf8, bilateral: true },
+      { id: "PC", name: "Thủ Quyết Âm Tâm Bào", short: "Tâm Bào (PC)", color: "#ec4899", hex: 0xec4899, bilateral: true },
+      { id: "TE", name: "Thủ Thiếu Dương Tam Tiêu", short: "Tam Tiêu (TE)", color: "#a855f7", hex: 0xa855f7, bilateral: true },
+      { id: "GB", name: "Túc Thiếu Dương Đởm Kinh", short: "Đởm (GB)", color: "#2dd4bf", hex: 0x2dd4bf, bilateral: true },
+      { id: "LR", name: "Túc Quyết Âm Can Kinh", short: "Can (LR)", color: "#22c55e", hex: 0x22c55e, bilateral: true },
+      { id: "CV", name: "Mạch Nhâm (Trục giữa trước)", short: "Mạch Nhâm (CV)", color: "#10b981", hex: 0x10b981, bilateral: false },
+      { id: "GV", name: "Mạch Đốc (Trục giữa sau)", short: "Mạch Đốc (GV)", color: "#06b6d4", hex: 0x06b6d4, bilateral: false },
+      { id: "EX", name: "Kỳ Huyệt Ngoài Kinh", short: "Kỳ Huyệt (EX)", color: "#e879f9", hex: 0xe879f9, bilateral: "mixed" }
+    ];
+
+    const MERIDIAN_LOOKUP = Object.fromEntries(MERIDIANS_META.map(m => [m.id, m]));
+
+    // =========================================================================
+    // 2. CƠ SỞ DỮ LIỆU ĐẦY ĐỦ 135 HUYỆT ĐẠO CÓ TỌA ĐỘ GIẢI PHẪU 3D CHUẨN XÁC
+    // =========================================================================
+    const ACUPOINTS_DB = [
+      // --- 1. THỦ THÁI ÂM PHẾ KINH (LU - 11 huyệt) ---
+      { code: "LU1", name: "Trung Phủ", hanzi: "中府", m: "LU", tag: "Mộ huyệt của Phế", pos: [0.22, 1.08, 0.16], loc: "Dưới xương đòn 1 thốn, cách đường giữa ngực 6 thốn (khoang liên sườn 1).", ben: "Trị ho, hen suyễn, tức ngực, đau vai lưng." },
+      { code: "LU2", name: "Vân Môn", hanzi: "雲門", m: "LU", tag: "Huyệt khí Phế", pos: [0.24, 1.13, 0.14], loc: "Chỗ lõm dưới bờ ngoài xương đòn, cách đường giữa ngực 6 thốn.", ben: "Thanh phế nhiệt, trị ho, khó thở, đau khớp vai." },
+      { code: "LU3", name: "Thiên Phủ", hanzi: "天府", m: "LU", tag: "Huyệt Phế kinh", pos: [0.37, 0.94, 0.08], loc: "Mặt trước trong cánh tay, dưới nếp nách trước 3 thốn.", ben: "Trị chảy máu cam, hen suyễn, đau mặt trong cánh tay." },
+      { code: "LU4", name: "Hiệp Bạch", hanzi: "俠白", m: "LU", tag: "Huyệt Phế kinh", pos: [0.41, 0.84, 0.085], loc: "Mặt trước trong cánh tay, dưới huyệt Thiên Phủ 1 thốn.", ben: "Trị ho, tức ngực, tim đập nhanh, đau cánh tay." },
+      { code: "LU5", name: "Xích Trạch", hanzi: "尺澤", m: "LU", tag: "Hợp huyệt (Thủy)", pos: [0.49, 0.63, 0.085], loc: "Trên nếp gấp khuỷu tay, bờ ngoài gân cơ nhị đầu cánh tay.", ben: "Thanh phế hỏa, trị ho ra máu, sốt cao, viêm họng, đau khuỷu tay." },
+      { code: "LU6", name: "Khổng Tối", hanzi: "孔最", m: "LU", tag: "Khích huyệt", pos: [0.54, 0.44, 0.085], loc: "Mặt trước ngoài cẳng tay, trên lằn chỉ cổ tay 7 thốn.", ben: "Cấp cứu ho ra máu, hen phế quản cấp, mất tiếng, viêm họng." },
+      { code: "LU7", name: "Liệt Khuyết", hanzi: "列缺", m: "LU", tag: "Lạc huyệt / Bát mạch giao hội", pos: [0.59, 0.21, 0.085], loc: "Phía trên mỏm trâm quay, cách lằn chỉ cổ tay 1.5 thốn.", ben: "Tuyên phế giải biểu, trị đau đầu, cứng gáy, cảm mạo, liệt mặt." },
+      { code: "LU8", name: "Kinh Cừ", hanzi: "經渠", m: "LU", tag: "Kinh huyệt (Kim)", pos: [0.60, 0.16, 0.08], loc: "Mặt trước ngoài cổ tay, cách lằn chỉ cổ tay 1 thốn, rãnh động mạch quay.", ben: "Trị ho, suyễn, đau tức ngực, đau cổ tay." },
+      { code: "LU9", name: "Thái Uyên", hanzi: "太淵", m: "LU", tag: "Nguyên huyệt / Hội của Mạch", pos: [0.61, 0.12, 0.075], loc: "Chỗ lõm đầu ngoài lằn chỉ cổ tay, bờ ngoài động mạch quay.", ben: "Bổ phế khí, trị ho lâu ngày, hụt hơi, vô mạch, đau cổ tay." },
+      { code: "LU10", name: "Ngư Tế", hanzi: "魚際", m: "LU", tag: "Huỳnh huyệt (Hỏa)", pos: [0.64, 0.04, 0.085], loc: "Trung điểm xương bàn tay 1, nơi tiếp giáp da gan tay và mu tay.", ben: "Thanh phế nhiệt, lợi hầu họng, trị ho khan, đau họng, sốt." },
+      { code: "LU11", name: "Thiếu Thương", hanzi: "少商", m: "LU", tag: "Tỉnh huyệt (Mộc)", pos: [0.67, -0.05, 0.095], loc: "Góc ngoài gốc móng ngón tay cái, cách góc móng 0.1 thốn.", ben: "Cấp cứu trúng gió ngất xỉu, viêm amidan cấp, sốt cao." },
+
+      // --- 2. THỦ DƯƠNG MINH ĐẠI TRƯỜNG KINH (LI - 10 huyệt trọng yếu) ---
+      { code: "LI1", name: "Thương Dương", hanzi: "商陽", m: "LI", tag: "Tỉnh huyệt (Kim)", pos: [0.71, -0.14, 0.075], loc: "Góc ngoài gốc móng ngón tay trỏ (phía ngón cái).", ben: "Thanh nhiệt khai khiếu, trị đau răng, viêm họng, sốt cao, tê ngón trỏ." },
+      { code: "LI2", name: "Nhị Gian", hanzi: "二間", m: "LI", tag: "Huỳnh huyệt (Thủy)", pos: [0.70, -0.08, 0.06], loc: "Chỗ lõm trước khớp bàn - ngón tay trỏ phía ngoài.", ben: "Trị chảy máu cam, đau răng hàm dưới, méo miệng." },
+      { code: "LI3", name: "Tam Gian", hanzi: "三間", m: "LI", tag: "Du huyệt (Mộc)", pos: [0.69, -0.03, 0.05], loc: "Chỗ lõm sau khớp bàn - ngón tay trỏ phía ngoài.", ben: "Trị sưng đau họng, đau răng, sưng mu bàn tay." },
+      { code: "LI4", name: "Hợp Cốc", hanzi: "合谷", m: "LI", tag: "Nguyên huyệt / Tứ tổng huyệt", pos: [0.68, 0.01, 0.04], loc: "Mu bàn tay, chỗ lõm giữa xương bàn tay 1 và 2 (khép ngón cái trỏ thấy gồ cao).", ben: "Huyệt giảm đau vùng đầu mặt số 1: trị đau đầu, đau răng, cảm cúm, tăng đề kháng." },
+      { code: "LI5", name: "Dương Khê", hanzi: "陽谿", m: "LI", tag: "Kinh huyệt (Hỏa)", pos: [0.64, 0.11, 0.03], loc: "Chỗ lõm hõm lào giải phẫu ở cổ tay khi duỗi ngón cái.", ben: "Trị đau đầu, ù tai, đau cổ tay, viêm gân." },
+      { code: "LI6", name: "Thiên Lịch", hanzi: "偏歷", m: "LI", tag: "Lạc huyệt", pos: [0.61, 0.25, 0.03], loc: "Trên đường nối Dương Khê - Khúc Trì, cách cổ tay 3 thốn.", ben: "Thông điều thủy đạo, trị phù thũng, ù tai, chảy máu cam." },
+      { code: "LI10", name: "Thủ Tam Lý", hanzi: "手三里", m: "LI", tag: "Huyệt cường tráng chi trên", pos: [0.55, 0.52, 0.035], loc: "Dưới huyệt Khúc Trì 2 thốn, trên đường nối Khúc Trì - Dương Khê.", ben: "Trị đau vai cánh tay, tê tay, đau bụng, tiêu chảy." },
+      { code: "LI11", name: "Khúc Trì", hanzi: "曲池", m: "LI", tag: "Hợp huyệt (Thổ)", pos: [0.53, 0.62, 0.035], loc: "Đầu ngoài nếp gấp khuỷu tay khi gập khuỷu 90 độ.", ben: "Thanh nhiệt hạ sốt, giảm ngứa dị ứng, hạ huyết áp, đau khớp khuỷu." },
+      { code: "LI15", name: "Kiên Ngung", hanzi: "肩髃", m: "LI", tag: "Huyệt vùng vai", pos: [0.35, 1.13, 0.04], loc: "Chỗ lõm phía trước dưới mỏm cùng vai đòn khi giang ngang cánh tay.", ben: "Đặc trị đau khớp vai, viêm quanh khớp vai, liệt chi trên." },
+      { code: "LI20", name: "Nghinh Hương", hanzi: "迎香", m: "LI", tag: "Huyệt giao hội", pos: [0.055, 1.47, 0.205], loc: "Bên cạnh cánh mũi, trên rãnh mũi má.", ben: "Đặc trị nghẹt mũi, viêm mũi dị ứng, viêm xoang, liệt dây thần kinh VII." },
+
+      // --- 3. TÚC DƯƠNG MINH VỊ KINH (ST - 14 huyệt trọng yếu) ---
+      { code: "ST1", name: "Thừa Khấp", hanzi: "承泣", m: "ST", tag: "Huyệt vùng mắt", pos: [0.065, 1.53, 0.20], loc: "Chính giữa bờ dưới xương ổ mắt, thẳng đồng tử nhìn thẳng.", ben: "Trị viêm kết mạc, quáng gà, giật mi mắt, cận thị." },
+      { code: "ST2", name: "Tứ Bạch", hanzi: "四白", m: "ST", tag: "Huyệt vùng mặt", pos: [0.065, 1.49, 0.205], loc: "Dưới huyệt Thừa Khấp 1 thốn, ngay lỗ dưới ổ mắt.", ben: "Trị đau dây thần kinh tam thoa, liệt mặt, hoa mắt, nhức mắt." },
+      { code: "ST4", name: "Địa Thương", hanzi: "地倉", m: "ST", tag: "Huyệt vùng miệng", pos: [0.06, 1.41, 0.205], loc: "Cách khóe miệng đo ngang ra 0.4 thốn.", ben: "Trị méo miệng, liệt mặt, chảy nước dãi, đau răng." },
+      { code: "ST6", name: "Giáp Xa", hanzi: "頰車", m: "ST", tag: "Huyệt vùng hàm", pos: [0.125, 1.41, 0.11], loc: "Phía trước góc hàm dưới 1 khoát ngón tay (nơi cơ cắn nổi lên khi cắn chặt răng).", ben: "Trị đau răng hàm dưới, cứng hàm, quai bị, liệt mặt." },
+      { code: "ST7", name: "Hạ Quan", hanzi: "下關", m: "ST", tag: "Huyệt vùng thái dương hàm", pos: [0.145, 1.48, 0.07], loc: "Chỗ lõm phía dưới cung gò má, trước lồi cầu xương hàm dưới.", ben: "Trị viêm khớp thái dương hàm, ù tai, đau răng." },
+      { code: "ST8", name: "Đầu Duy", hanzi: "頭維", m: "ST", tag: "Huyệt góc trán", pos: [0.135, 1.66, 0.11], loc: "Góc trán, cách đường chính giữa đầu 4.5 thốn.", ben: "Trị đau nửa đầu, nhức đầu vùng trán, chóng mặt, chảy nước mắt." },
+      { code: "ST12", name: "Khuyết Bồn", hanzi: "缺盆", m: "ST", tag: "Huyệt hố thượng đòn", pos: [0.16, 1.19, 0.09], loc: "Chỗ lõm chính giữa bờ trên xương đòn.", ben: "Trị ho, hen suyễn, đau họng, đau vai lan xuống tay." },
+      { code: "ST25", name: "Thiên Khu", hanzi: "天樞", m: "ST", tag: "Mộ huyệt của Đại Trường", pos: [0.095, 0.41, 0.235], loc: "Từ chính giữa rốn đo ngang ra hai bên 2 thốn.", ben: "Điều hòa đại trường: trị táo bón, tiêu chảy, đau quanh rốn, đầy bụng." },
+      { code: "ST34", name: "Lương Khâu", hanzi: "梁丘", m: "ST", tag: "Khích huyệt", pos: [0.22, -0.62, 0.12], loc: "Phía trên bờ ngoài xương bánh chè 2 thốn.", ben: "Cấp cứu đau dạ dày cấp tính, viêm tuyến vú, đau khớp gối." },
+      { code: "ST35", name: "Độc Tỵ", hanzi: "犢鼻", m: "ST", tag: "Mắt gối ngoài", pos: [0.215, -0.74, 0.125], loc: "Chỗ lõm phía ngoài dây chằng bánh chè khi gập gối (mắt gối ngoài).", ben: "Đặc trị thoái hóa khớp gối, viêm khớp gối, sưng đau đầu gối." },
+      { code: "ST36", name: "Túc Tam Lý", hanzi: "足三里", m: "ST", tag: "Hợp huyệt (Thổ) / Huyệt trường thọ", pos: [0.235, -0.94, 0.12], loc: "Dưới mắt gối ngoài (Độc Tỵ) 3 thốn, cách mào trước xương chày 1 khoát ngón tay.", ben: "Bồi bổ nguyên khí, kiện tỳ vị, tăng miễn dịch toàn thân, trị đau dạ dày, suy nhược." },
+      { code: "ST41", name: "Giải Khê", hanzi: "解谿", m: "ST", tag: "Kinh huyệt (Hỏa)", pos: [0.19, -1.61, 0.08], loc: "Chính giữa nếp gấp trước cổ chân, giữa hai gân duỗi dài ngón cái và ngón chung.", ben: "Trị đau cổ chân, bàn chân rủ, đau đầu, đầy bụng." },
+      { code: "ST44", name: "Nội Đình", hanzi: "內庭", m: "ST", tag: "Huỳnh huyệt (Thủy)", pos: [0.195, -1.75, 0.165], loc: "Kẽ giữa ngón chân thứ 2 và thứ 3, phía trước khớp bàn ngón chân.", ben: "Thanh vị hỏa: trị đau răng, chảy máu cam, đau dạ dày, sưng đau mu bàn chân." },
+      { code: "ST45", name: "Lệ Đoài", hanzi: "厲兌", m: "ST", tag: "Tỉnh huyệt (Kim)", pos: [0.195, -1.78, 0.21], loc: "Góc ngoài gốc móng ngón chân thứ 2.", ben: "Thanh nhiệt an thần, trị hay mơ, chảy máu cam, viêm amidan." },
+
+      // --- 4. TÚC THÁI ÂM TỲ KINH (SP - 9 huyệt trọng yếu) ---
+      { code: "SP1", name: "Ẩn Bạch", hanzi: "隱白", m: "SP", tag: "Tỉnh huyệt (Mộc)", pos: [0.155, -1.78, 0.21], loc: "Góc trong gốc móng ngón chân cái.", ben: "Kiện tỳ thống huyết: trị rong kinh, đại tiện ra máu, mất ngủ hay mơ." },
+      { code: "SP2", name: "Đại Đô", hanzi: "大都", m: "SP", tag: "Huỳnh huyệt (Hỏa)", pos: [0.145, -1.76, 0.17], loc: "Chỗ lõm phía trước trong khớp bàn - ngón chân cái.", ben: "Trị đầy bụng, khó tiêu, sốt không ra mồ hôi." },
+      { code: "SP3", name: "Thái Bạch", hanzi: "太白", m: "SP", tag: "Nguyên huyệt / Du huyệt (Thổ)", pos: [0.14, -1.74, 0.12], loc: "Chỗ lõm phía sau đầu xương bàn chân thứ 1 ở bờ trong bàn chân.", ben: "Bổ tỳ vị, trị đau dạ dày, chán ăn, tiêu chảy, nặng mỏi người." },
+      { code: "SP4", name: "Công Tôn", hanzi: "公孫", m: "SP", tag: "Lạc huyệt / Bát mạch giao hội", pos: [0.14, -1.71, 0.08], loc: "Chỗ lõm phía trước dưới nền xương bàn chân thứ 1.", ben: "Điều hòa Xung mạch và Tỳ Vị: trị đau dạ dày, nôn mửa, đau bụng kinh." },
+      { code: "SP5", name: "Thương Khâu", hanzi: "商丘", m: "SP", tag: "Kinh huyệt (Kim)", pos: [0.145, -1.61, 0.03], loc: "Chỗ lõm phía trước dưới mắt cá chân trong.", ben: "Trị đau khớp cổ chân, đầy bụng, sôi bụng, táo bón." },
+      { code: "SP6", name: "Tam Âm Giao", hanzi: "三陰交", m: "SP", tag: "Hội của 3 kinh Âm (Can - Tỳ - Thận)", pos: [0.14, -1.42, 0.01], loc: "Trên đỉnh cao mắt cá chân trong 3 thốn, ngay sát bờ sau xương chày.", ben: "Bổ âm dưỡng huyết, điều hòa nội tiết, trị mất ngủ, rối loạn kinh nguyệt, tiểu đêm." },
+      { code: "SP8", name: "Địa Cơ", hanzi: "地機", m: "SP", tag: "Khích huyệt", pos: [0.145, -1.08, 0.01], loc: "Dưới huyệt Âm Lăng Tuyền 3 thốn, sát bờ sau xương chày.", ben: "Đặc trị đau bụng kinh cấp tính, kinh nguyệt không đều, phù thũng." },
+      { code: "SP9", name: "Âm Lăng Tuyền", hanzi: "陰陵泉", m: "SP", tag: "Hợp huyệt (Thủy)", pos: [0.15, -0.85, 0.02], loc: "Chỗ lõm dưới bờ trong lồi cầu trong xương chày.", ben: "Kiện tỳ lợi thấp: trị tiểu khó, phù chân, đau đầu gối mặt trong." },
+      { code: "SP10", name: "Huyết Hải", hanzi: "血海", m: "SP", tag: "Bể của Huyết", pos: [0.155, -0.60, 0.09], loc: "Phía trên bờ trong xương bánh chè 2 thốn (chỗ gồ cơ rộng trong).", ben: "Hoạt huyết dưỡng huyết: trị mẩn ngứa dị ứng, mề đay, rối loạn kinh nguyệt." },
+
+      // --- 5. THỦ THIẾU ÂM TÂM KINH (HT - 7 huyệt trọng yếu) ---
+      { code: "HT1", name: "Cực Tuyền", hanzi: "極泉", m: "HT", tag: "Huyệt khởi đầu Tâm kinh", pos: [0.29, 0.99, 0.02], loc: "Chính giữa hố nách, phía trong động mạch nách.", ben: "Trị đau tức vùng tim, đau khớp vai, hôi nách, lạnh đau cánh tay." },
+      { code: "HT3", name: "Thiếu Hải", hanzi: "少海", m: "HT", tag: "Hợp huyệt (Thủy)", pos: [0.47, 0.62, 0.01], loc: "Đầu trong nếp gấp khuỷu tay khi gập khuỷu.", ben: "Thanh tâm an thần, trị đau vùng tim, run tay, đau khớp khuỷu." },
+      { code: "HT4", name: "Linh Đạo", hanzi: "靈道", m: "HT", tag: "Kinh huyệt (Kim)", pos: [0.58, 0.21, 0.035], loc: "Mặt trước trong cẳng tay, trên lằn chỉ cổ tay 1.5 thốn, sát bờ ngoài gân cơ trụ trước.", ben: "Trị đau vùng tim, mất tiếng đột ngột, co rút khuỷu cẳng tay." },
+      { code: "HT5", name: "Thông Lý", hanzi: "通里", m: "HT", tag: "Lạc huyệt", pos: [0.59, 0.18, 0.038], loc: "Trên lằn chỉ cổ tay 1 thốn, sát bờ ngoài gân cơ trụ trước.", ben: "Trị hồi hộp đánh trống ngực, nói ngọng, cứng lưỡi, đau cổ tay." },
+      { code: "HT6", name: "Âm Khích", hanzi: "陰郄", m: "HT", tag: "Khích huyệt", pos: [0.60, 0.15, 0.04], loc: "Trên lằn chỉ cổ tay 0.5 thốn, sát bờ ngoài gân cơ trụ trước.", ben: "Trị ra mồ hôi trộm (đạo hãn), đau thắt ngực, hồi hộp." },
+      { code: "HT7", name: "Thần Môn", hanzi: "神門", m: "HT", tag: "Nguyên huyệt / Du huyệt (Thổ)", pos: [0.61, 0.12, 0.042], loc: "Đầu trong lằn chỉ cổ tay, chỗ lõm bờ ngoài xương đậu.", ben: "Huyệt an thần hàng đầu: trị mất ngủ, lo âu, tim đập nhanh, hay quên." },
+      { code: "HT9", name: "Thiếu Xung", hanzi: "少衝", m: "HT", tag: "Tỉnh huyệt (Mộc)", pos: [0.67, -0.13, 0.035], loc: "Góc ngoài gốc móng ngón tay út (phía ngón áp út).", ben: "Thanh tâm nhiệt, cấp cứu ngất xỉu, hồi hộp, sốt cao." },
+
+      // --- 6. THỦ THÁI DƯƠNG TIỂU TRƯỜNG KINH (SI - 8 huyệt trọng yếu) ---
+      { code: "SI1", name: "Thiếu Trạch", hanzi: "少澤", m: "SI", tag: "Tỉnh huyệt (Kim)", pos: [0.67, -0.13, 0.015], loc: "Góc trong gốc móng ngón tay út (bờ trụ).", ben: "Trị thiếu sữa sau sinh, viêm tuyến vú, đau đầu, đau họng." },
+      { code: "SI3", name: "Hậu Khê", hanzi: "後谿", m: "SI", tag: "Du huyệt (Mộc) / Bát mạch giao hội", pos: [0.66, -0.02, 0.005], loc: "Đầu trong nếp gấp ngang bàn tay sau khớp bàn ngón út (khi nắm tay).", ben: "Thông Mạch Đốc: đặc trị đau cứng cổ gáy, đau thắt lưng, ra mồ hôi trộm." },
+      { code: "SI4", name: "Uyển Cốt", hanzi: "腕骨", m: "SI", tag: "Nguyên huyệt", pos: [0.64, 0.08, 0.005], loc: "Bờ trong bàn tay, chỗ lõm giữa nền xương bàn tay 5 và xương tháp.", ben: "Trị đau khớp cổ tay, cứng cổ, vàng da, ù tai." },
+      { code: "SI5", name: "Dương Cốc", hanzi: "陽谷", m: "SI", tag: "Kinh huyệt (Hỏa)", pos: [0.62, 0.12, 0.005], loc: "Chỗ lõm bờ trong cổ tay, giữa mỏm trâm trụ và xương tháp.", ben: "Trị sưng đau cổ tay, ù tai, điếc tai, đau răng." },
+      { code: "SI6", name: "Dưỡng Lão", hanzi: "養老", m: "SI", tag: "Khích huyệt", pos: [0.60, 0.18, -0.005], loc: "Chỗ lõm phía trên và ngoài đầu dưới xương trụ khi xoay sấp bàn tay.", ben: "Sáng mắt, thư cân: trị mờ mắt ở người già, đau lưng cấp, vẹo cổ." },
+      { code: "SI8", name: "Tiểu Hải", hanzi: "小海", m: "SI", tag: "Hợp huyệt (Thổ)", pos: [0.51, 0.62, -0.035], loc: "Rãnh giữa mỏm khuỷu và mỏm trên lồi cầu trong xương cánh tay.", ben: "Trị đau thần kinh trụ, tê cẳng tay, đau vai gáy." },
+      { code: "SI11", name: "Thiên Tông", hanzi: "天宗", m: "SI", tag: "Huyệt vùng bả vai", pos: [0.18, 0.96, -0.175], loc: "Chỗ lõm chính giữa hố dưới gai xương bả vai.", ben: "Đặc trị đau vùng bả vai, đau mỏi cổ vai gáy lan ra cánh tay." },
+      { code: "SI19", name: "Thính Cung", hanzi: "聽宮", m: "SI", tag: "Huyệt vùng tai", pos: [0.16, 1.49, 0.03], loc: "Chỗ lõm phía trước bình tai khi há miệng.", ben: "Đặc trị ù tai, điếc tai, viêm tai giữa, đau khớp hàm." },
+
+      // --- 7. TÚC THÁI DƯƠNG BÀNG QUANG KINH (BL - 16 huyệt trọng yếu) ---
+      { code: "BL1", name: "Tình Minh", hanzi: "睛明", m: "BL", tag: "Huyệt vùng mắt", pos: [0.03, 1.55, 0.205], loc: "Chỗ lõm cách khóe mắt trong lên trên 0.1 thốn.", ben: "Đặc trị các bệnh về mắt: mỏi mắt, khô mắt, cận thị, viêm kết mạc." },
+      { code: "BL2", name: "Toản Trúc", hanzi: "攢竹", m: "BL", tag: "Huyệt đầu lông mày", pos: [0.04, 1.58, 0.205], loc: "Chỗ lõm ngay đầu trong lông mày.", ben: "Trị đau đầu vùng trán, nhức hốc mắt, giật mi mắt, viêm xoang." },
+      { code: "BL10", name: "Thiên Trụ", hanzi: "天柱", m: "BL", tag: "Huyệt vùng gáy", pos: [0.055, 1.36, -0.14], loc: "Bờ ngoài cơ thang ở sau gáy, cách đường giữa gáy 1.3 thốn.", ben: "Trị đau cứng cổ gáy, đau đầu sau gáy, nghẹt mũi." },
+      { code: "BL11", name: "Đại Trữ", hanzi: "大杼", m: "BL", tag: "Hội của Xương (Bát hội huyệt)", pos: [0.075, 1.18, -0.17], loc: "Dưới mỏm gai đốt sống ngực T1 đo ngang ra 1.5 thốn.", ben: "Bổ xương khớp: trị đau cổ vai gáy, thoái hóa cột sống, loãng xương." },
+      { code: "BL12", name: "Phong Môn", hanzi: "風門", m: "BL", tag: "Cửa của Phong tà", pos: [0.075, 1.11, -0.175], loc: "Dưới mỏm gai đốt sống ngực T2 đo ngang ra 1.5 thốn.", ben: "Khu phong giải biểu: trị cảm mạo phong hàn, ho, đau lưng trên." },
+      { code: "BL13", name: "Phế Du", hanzi: "肺俞", m: "BL", tag: "Bối du huyệt của Phế", pos: [0.075, 1.04, -0.18], loc: "Dưới mỏm gai đốt sống ngực T3 đo ngang ra 1.5 thốn.", ben: "Bổ phế khí: trị ho, hen suyễn, viêm phế quản, ra mồ hôi trộm." },
+      { code: "BL15", name: "Tâm Du", hanzi: "心俞", m: "BL", tag: "Bối du huyệt của Tâm", pos: [0.075, 0.90, -0.185], loc: "Dưới mỏm gai đốt sống ngực T5 đo ngang ra 1.5 thốn.", ben: "Dưỡng tâm an thần: trị mất ngủ, hồi hộp, hay quên, đau vùng tim." },
+      { code: "BL18", name: "Can Du", hanzi: "肝俞", m: "BL", tag: "Bối du huyệt của Can", pos: [0.075, 0.72, -0.185], loc: "Dưới mỏm gai đốt sống ngực T9 đo ngang ra 1.5 thốn.", ben: "Sơ can lợi đởm, sáng mắt: trị viêm gan, đau mạng sườn, hoa mắt, cáu gắt." },
+      { code: "BL20", name: "Tỳ Du", hanzi: "脾俞", m: "BL", tag: "Bối du huyệt của Tỳ", pos: [0.075, 0.60, -0.18], loc: "Dưới mỏm gai đốt sống ngực T11 đo ngang ra 1.5 thốn.", ben: "Kiện tỳ hòa vị: trị chán ăn, đầy bụng, tiêu chảy, suy nhược cơ thể." },
+      { code: "BL21", name: "Vị Du", hanzi: "胃俞", m: "BL", tag: "Bối du huyệt của Vị", pos: [0.075, 0.54, -0.18], loc: "Dưới mỏm gai đốt sống ngực T12 đo ngang ra 1.5 thốn.", ben: "Hòa vị giáng nghịch: trị đau dạ dày, ợ chua, nôn mửa, loét dạ dày." },
+      { code: "BL23", name: "Thận Du", hanzi: "腎俞", m: "BL", tag: "Bối du huyệt của Thận", pos: [0.08, 0.42, -0.18], loc: "Dưới mỏm gai đốt sống thắt lưng L2 đo ngang ra 1.5 thốn.", ben: "Bổ thận tráng dương: trị đau thắt lưng, ù tai, tiểu đêm, yếu sinh lý." },
+      { code: "BL25", name: "Đại Trường Du", hanzi: "大腸俞", m: "BL", tag: "Bối du huyệt của Đại Trường", pos: [0.085, 0.30, -0.185], loc: "Dưới mỏm gai đốt sống thắt lưng L4 đo ngang ra 1.5 thốn.", ben: "Trị đau thắt lưng, đau thần kinh tọa, táo bón, tiêu chảy." },
+      { code: "BL40", name: "Ủy Trung", hanzi: "委中", m: "BL", tag: "Hợp huyệt (Thổ) / Tứ tổng huyệt", pos: [0.19, -0.76, -0.095], loc: "Chính giữa nếp gấp ngang sau khoeo chân.", ben: "Tứ tổng huyệt vùng lưng: đặc trị đau thắt lưng cấp và mạn tính, đau khớp gối." },
+      { code: "BL57", name: "Thừa Sơn", hanzi: "承山", m: "BL", tag: "Huyệt bắp chân", pos: [0.19, -1.14, -0.095], loc: "Chỗ lõm đỉnh chữ V dưới hai cơ sinh đôi bắp chân.", ben: "Thư cân hoạt lạc: trị chuột rút bắp chân, đau thần kinh tọa, bệnh trĩ." },
+      { code: "BL60", name: "Côn Lôn", hanzi: "崑崙", m: "BL", tag: "Kinh huyệt (Hỏa)", pos: [0.23, -1.58, -0.04], loc: "Chỗ lõm giữa đỉnh mắt cá chân ngoài và gân gót (Achilles).", ben: "Trị đau cổ gáy, đau thắt lưng, đau gót chân, nhức đầu." },
+      { code: "BL67", name: "Chí Âm", hanzi: "至陰", m: "BL", tag: "Tỉnh huyệt (Kim)", pos: [0.24, -1.78, 0.17], loc: "Góc ngoài gốc móng ngón chân út.", ben: "Trị nhức đầu đỉnh đầu, ngạt mũi, hỗ trợ xoay ngôi thai ngược." },
+
+      // --- 8. TÚC THIẾU ÂM THẬN KINH (KI - 7 huyệt trọng yếu) ---
+      { code: "KI1", name: "Dũng Tuyền", hanzi: "湧泉", m: "KI", tag: "Tỉnh huyệt (Mộc)", pos: [0.19, -1.795, 0.08], loc: "Chỗ lõm chính giữa gan bàn chân tại điểm nối 1/3 trước và 2/3 sau.", ben: "Giáng âm hỏa, an thần: trị mất ngủ, bốc hỏa, tăng huyết áp, lạnh bàn chân." },
+      { code: "KI2", name: "Nhiên Cốc", hanzi: "然谷", m: "KI", tag: "Huỳnh huyệt (Hỏa)", pos: [0.145, -1.71, 0.06], loc: "Chỗ lõm phía trước dưới xương thuyền ở bờ trong bàn chân.", ben: "Thanh thận nhiệt: trị viêm họng, tiểu buốt, kinh nguyệt không đều." },
+      { code: "KI3", name: "Thái Khê", hanzi: "太谿", m: "KI", tag: "Nguyên huyệt / Du huyệt (Thổ)", pos: [0.145, -1.58, -0.04], loc: "Chỗ lõm giữa đỉnh mắt cá chân trong và gân gót (Achilles).", ben: "Tư bổ thận âm: trị đau lưng, ù tai, mất ngủ, tiểu đêm, đau gót chân." },
+      { code: "KI4", name: "Đại Chung", hanzi: "大鐘", m: "KI", tag: "Lạc huyệt", pos: [0.145, -1.63, -0.055], loc: "Phía sau dưới huyệt Thái Khê 0.5 thốn, sát bờ trong gân gót.", ben: "Trị đau gót chân, bí tiểu, hen suyễn, suy nhược thần kinh." },
+      { code: "KI6", name: "Chiếu Hải", hanzi: "照海", m: "KI", tag: "Bát mạch giao hội (Âm Kiều)", pos: [0.145, -1.65, -0.005], loc: "Chỗ lõm ngay dưới đỉnh mắt cá chân trong 1 thốn.", ben: "Tư âm thanh nhiệt: trị mất ngủ, khô họng, táo bón, rối loạn kinh nguyệt." },
+      { code: "KI7", name: "Phục Lưu", hanzi: "復溜", m: "KI", tag: "Kinh huyệt (Kim)", pos: [0.145, -1.48, -0.03], loc: "Trên huyệt Thái Khê 2 thốn, sát bờ trước gân gót.", ben: "Điều tiết mồ hôi (cầm mồ hôi trộm hoặc kích thích ra mồ hôi), trị phù thũng." },
+      { code: "KI27", name: "Du Phủ", hanzi: "俞府", m: "KI", tag: "Huyệt tận cùng Thận kinh", pos: [0.085, 1.15, 0.16], loc: "Chỗ lõm dưới bờ dưới xương đòn, cách đường giữa ngực 2 thốn.", ben: "Nạp khí bình suyễn: trị ho, hen suyễn, tức ngực, nôn mửa." },
+
+      // --- 9. THỦ QUYẾT ÂM TÂM BÀO KINH (PC - 8 huyệt trọng yếu) ---
+      { code: "PC1", name: "Thiên Trì", hanzi: "天池", m: "PC", tag: "Huyệt khởi đầu Tâm Bào", pos: [0.19, 0.87, 0.205], loc: "Khoang liên sườn 4, cách đường giữa ngực 5 thốn (ngoài núm vú 1 thốn).", ben: "Trị tức ngực, đau mạng sườn, thiếu sữa, viêm tuyến vú." },
+      { code: "PC3", name: "Khúc Trạch", hanzi: "曲澤", m: "PC", tag: "Hợp huyệt (Thủy)", pos: [0.48, 0.62, 0.065], loc: "Trên nếp gấp khuỷu tay, bờ trong gân cơ nhị đầu cánh tay.", ben: "Thanh tâm nhiệt: trị đau vùng tim, hồi hộp, sốt cao, nôn mửa." },
+      { code: "PC4", name: "Khích Môn", hanzi: "郄門", m: "PC", tag: "Khích huyệt", pos: [0.57, 0.34, 0.068], loc: "Mặt trước cẳng tay, trên lằn chỉ cổ tay 5 thốn, giữa hai gân cơ gan tay.", ben: "Cấp cứu đau thắt ngực, nhịp tim nhanh, hồi hộp lo âu." },
+      { code: "PC5", name: "Giản Sử", hanzi: "間使", m: "PC", tag: "Kinh huyệt (Kim)", pos: [0.59, 0.25, 0.068], loc: "Trên lằn chỉ cổ tay 3 thốn, giữa hai gân cơ gan tay lớn và bé.", ben: "Trị hồi hộp, đau dạ dày, động kinh, sốt rét." },
+      { code: "PC6", name: "Nội Quan", hanzi: "內關", m: "PC", tag: "Lạc huyệt / Bát mạch giao hội", pos: [0.60, 0.20, 0.068], loc: "Mặt trước cẳng tay, trên lằn chỉ cổ tay 2 thốn, giữa hai gân cơ gan tay lớn và bé.", ben: "An thần, chống nôn, điều hòa nhịp tim: trị mất ngủ, say tàu xe, đau dạ dày." },
+      { code: "PC7", name: "Đại Lăng", hanzi: "大陵", m: "PC", tag: "Nguyên huyệt / Du huyệt (Thổ)", pos: [0.61, 0.12, 0.062], loc: "Chính giữa lằn chỉ cổ tay mặt trước, giữa hai gân cơ gan tay.", ben: "Thanh tâm an thần: trị hội chứng ống cổ tay, mất ngủ, hôi miệng, đau ngực." },
+      { code: "PC8", name: "Lao Cung", hanzi: "勞宮", m: "PC", tag: "Huỳnh huyệt (Hỏa)", pos: [0.64, 0.01, 0.062], loc: "Chính giữa lòng bàn tay (khi nắm tay, đầu ngón giữa chạm vào đâu là huyệt).", ben: "Thanh tâm hỏa: trị loét miệng, nóng lòng bàn tay, hồi hộp, ngất xỉu." },
+      { code: "PC9", name: "Trung Xung", hanzi: "中衝", m: "PC", tag: "Tỉnh huyệt (Mộc)", pos: [0.69, -0.15, 0.055], loc: "Chính giữa đầu chóp ngón tay giữa.", ben: "Cấp cứu trúng gió, say nắng, ngất xỉu, sốt cao ở trẻ em." },
+
+      // --- 10. THỦ THIẾU DƯƠNG TAM TIÊU KINH (TE - 9 huyệt trọng yếu) ---
+      { code: "TE1", name: "Quan Xung", hanzi: "關衝", m: "TE", tag: "Tỉnh huyệt (Kim)", pos: [0.68, -0.14, 0.03], loc: "Góc trong gốc móng ngón tay áp út (bờ trụ).", ben: "Thanh nhiệt lợi hầu: trị đau đầu, đỏ mắt, ù tai, đau họng." },
+      { code: "TE2", name: "Dịch Môn", hanzi: "液門", m: "TE", tag: "Huỳnh huyệt (Thủy)", pos: [0.67, -0.08, 0.025], loc: "Kẽ giữa ngón áp út và ngón út ở mu bàn tay.", ben: "Trị đau đầu, ù tai, đau họng, sưng đau mu bàn tay." },
+      { code: "TE3", name: "Trung Chử", hanzi: "中渚", m: "TE", tag: "Du huyệt (Mộc)", pos: [0.66, -0.02, 0.02], loc: "Mu bàn tay, chỗ lõm sau khớp bàn - ngón tay 4 và 5.", ben: "Trị ù tai, điếc tai, đau nửa đầu, đau vai gáy, tê ngón tay." },
+      { code: "TE4", name: "Dương Trì", hanzi: "陽池", m: "TE", tag: "Nguyên huyệt", pos: [0.63, 0.12, 0.015], loc: "Chỗ lõm chính giữa nếp gấp cổ tay mặt mu, bờ ngoài gân duỗi chung.", ben: "Trị đau khớp cổ tay, cảm mạo, ù tai, tiểu đường." },
+      { code: "TE5", name: "Ngoại Quan", hanzi: "外關", m: "TE", tag: "Lạc huyệt / Bát mạch giao hội", pos: [0.60, 0.21, 0.01], loc: "Mặt mu cẳng tay, trên nếp gấp cổ tay 2 thốn, giữa xương quay và xương trụ.", ben: "Giải biểu thanh nhiệt: trị cảm sốt, đau nửa đầu, ù tai, cứng cổ, liệt chi trên." },
+      { code: "TE6", name: "Chi Câu", hanzi: "支溝", m: "TE", tag: "Kinh huyệt (Hỏa)", pos: [0.59, 0.26, 0.005], loc: "Mặt mu cẳng tay, trên nếp gấp cổ tay 3 thốn.", ben: "Đặc trị táo bón kinh niên, đau tức mạng sườn, khàn tiếng." },
+      { code: "TE14", name: "Kiên Liêu", hanzi: "肩髎", m: "TE", tag: "Huyệt vùng vai sau", pos: [0.35, 1.12, -0.04], loc: "Chỗ lõm phía sau dưới mỏm cùng vai đòn khi giang cánh tay.", ben: "Đặc trị viêm quanh khớp vai, đau vai không giơ tay lên được." },
+      { code: "TE17", name: "Ế Phong", hanzi: "翳風", m: "TE", tag: "Huyệt sau dái tai", pos: [0.145, 1.44, -0.04], loc: "Chỗ lõm ngay sau dái tai, giữa xương chũm và xương hàm dưới.", ben: "Khu phong thông khiếu: trị ù tai, điếc tai, liệt mặt, quai bị." },
+      { code: "TE23", name: "Ty Trúc Không", hanzi: "絲竹空", m: "TE", tag: "Huyệt đuôi lông mày", pos: [0.125, 1.58, 0.14], loc: "Chỗ lõm ngay đầu ngoài lông mày.", ben: "Trị đau nửa đầu, nhức mắt, giật mi mắt, liệt mặt." },
+
+      // --- 11. TÚC THIẾU DƯƠNG ĐỞM KINH (GB - 11 huyệt trọng yếu) ---
+      { code: "GB1", name: "Đồng Tử Liêu", hanzi: "瞳子髎", m: "GB", tag: "Huyệt khóe mắt ngoài", pos: [0.115, 1.55, 0.16], loc: "Cách khóe mắt ngoài 0.5 thốn, chỗ lõm bờ ngoài ổ mắt.", ben: "Trị đau nửa đầu, nhức mắt, quáng gà, mờ mắt." },
+      { code: "GB8", name: "Suất Cốc", hanzi: "率谷", m: "GB", tag: "Huyệt vùng thái dương", pos: [0.16, 1.62, 0.01], loc: "Trên đỉnh vành tai 1.5 thốn.", ben: "Đặc trị đau nửa đầu (Migraine), chóng mặt, say rượu." },
+      { code: "GB14", name: "Dương Bạch", hanzi: "陽白", m: "GB", tag: "Huyệt vùng trán", pos: [0.065, 1.63, 0.195], loc: "Trên chính giữa lông mày 1 thốn.", ben: "Trị đau đầu vùng trán, sụp mi mắt, liệt dây thần kinh VII." },
+      { code: "GB20", name: "Phong Trì", hanzi: "風池", m: "GB", tag: "Huyệt khu phong chủ yếu", pos: [0.095, 1.38, -0.135], loc: "Chỗ lõm sau gáy, giữa cơ ức đòn chũm và cơ thang, ngang dái tai.", ben: "Trị cảm mạo, đau đầu sau gáy, cứng cổ vai gáy, hoa mắt, tăng huyết áp." },
+      { code: "GB21", name: "Kiên Tỉnh", hanzi: "肩井", m: "GB", tag: "Huyệt đỉnh vai", pos: [0.22, 1.20, -0.03], loc: "Điểm cao nhất của vùng vai (trung điểm đường nối Đại Chùy và mỏm cùng vai).", ben: "Đặc trị đau mỏi cổ vai gáy, cứng cổ, tắc tia sữa (chống chỉ định phụ nữ có thai)." },
+      { code: "GB30", name: "Hoàn Khiêu", hanzi: "環跳", m: "GB", tag: "Huyệt vùng mông", pos: [0.22, 0.06, -0.155], loc: "Chỗ lõm phía sau ngoài khớp háng (nối 1/3 ngoài và 2/3 trong đường mấu chuyển lớn - khe xương cùng).", ben: "Huyệt số 1 trị đau thần kinh tọa, đau khớp háng, tê liệt chi dưới." },
+      { code: "GB31", name: "Phong Thị", hanzi: "Phong Thị", m: "GB", tag: "Huyệt mặt ngoài đùi", pos: [0.26, -0.36, 0.0], loc: "Mặt ngoài đùi, đứng thẳng xuôi tay thì đầu ngón giữa chạm vào đâu là huyệt.", ben: "Khu phong hoạt lạc: trị đau thần kinh tọa, tê bì mặt ngoài đùi, mẩn ngứa." },
+      { code: "GB34", name: "Dương Lăng Tuyền", hanzi: "陽陵泉", m: "GB", tag: "Hợp huyệt (Thổ) / Hội của Cân", pos: [0.265, -0.84, 0.02], loc: "Chỗ lõm phía trước và dưới đầu trên xương mác.", ben: "Hội của Cân (gân cơ): trị chuột rút, co cứng gân cơ, đau thần kinh tọa, đau mạng sườn." },
+      { code: "GB39", name: "Huyền Chung", hanzi: "懸鐘", m: "GB", tag: "Hội của Tủy (Bát hội huyệt)", pos: [0.245, -1.42, 0.0], loc: "Trên đỉnh mắt cá chân ngoài 3 thốn, sát bờ trước xương mác.", ben: "Bổ tủy mạnh gân xương: trị vẹo cổ cấp, đau thần kinh tọa, suy nhược." },
+      { code: "GB40", name: "Khâu Khư", hanzi: "丘墟", m: "GB", tag: "Nguyên huyệt", pos: [0.235, -1.61, 0.045], loc: "Chỗ lõm phía trước dưới mắt cá chân ngoài.", ben: "Trị bong gân cổ chân, đau tức mạng sườn, đau thần kinh tọa." },
+      { code: "GB41", name: "Túc Lâm Khấp", hanzi: "足臨泣", m: "GB", tag: "Du huyệt (Mộc) / Bát mạch giao hội", pos: [0.225, -1.72, 0.12], loc: "Chỗ lõm phía trước chỗ tiếp giáp xương bàn chân 4 và 5.", ben: "Trị đau nửa đầu, đau mạng sườn, sưng đau mu bàn chân." },
+
+      // --- 12. TÚC QUYẾT ÂM CAN KINH (LR - 7 huyệt trọng yếu) ---
+      { code: "LR1", name: "Đại Đôn", hanzi: "大敦", m: "LR", tag: "Tỉnh huyệt (Mộc)", pos: [0.18, -1.78, 0.21], loc: "Góc ngoài gốc móng ngón chân cái (phía ngón thứ 2).", ben: "Sơ can lý khí: trị thoát vị bẹn, rong kinh, ngất xỉu." },
+      { code: "LR2", name: "Hành Gian", hanzi: "行間", m: "LR", tag: "Huỳnh huyệt (Hỏa)", pos: [0.175, -1.75, 0.175], loc: "Kẽ giữa ngón chân cái và ngón thứ 2, phía trước khớp bàn ngón chân.", ben: "Thanh can tả hỏa: trị đau đầu, đỏ mắt, cáu gắt, mất ngủ, tăng huyết áp." },
+      { code: "LR3", name: "Thái Xung", hanzi: "太衝", m: "LR", tag: "Nguyên huyệt / Du huyệt (Thổ)", pos: [0.17, -1.72, 0.135], loc: "Mu bàn chân, chỗ lõm khe giữa xương bàn chân 1 và 2 đo lên 1.5 thốn.", ben: "Bình can giáng hỏa: giảm căng thẳng stress, đau đỉnh đầu, hạ huyết áp, điều kinh." },
+      { code: "LR4", name: "Trung Phong", hanzi: "中封", m: "LR", tag: "Kinh huyệt (Kim)", pos: [0.155, -1.61, 0.055], loc: "Phía trước mắt cá chân trong 1 thốn, bờ trong gân cơ chày trước.", ben: "Trị đau vùng hạ vị, di tinh, tiểu khó, đau cổ chân." },
+      { code: "LR8", name: "Khúc Tuyền", hanzi: "曲泉", m: "LR", tag: "Hợp huyệt (Thủy)", pos: [0.15, -0.75, -0.02], loc: "Đầu trong nếp gấp khoeo chân khi gập gối.", ben: "Tư bổ can thận: trị đau khớp gối mặt trong, rối loạn kinh nguyệt, tiểu khó." },
+      { code: "LR13", name: "Chương Môn", hanzi: "章門", m: "LR", tag: "Mộ huyệt của Tỳ / Hội của Tạng", pos: [0.21, 0.56, 0.09], loc: "Ngay đầu tự do của xương sườn cụt thứ 11 ở mạng sườn.", ben: "Sơ can kiện tỳ: trị đau mạng sườn, đầy bụng, tiêu chảy, gan lách to." },
+      { code: "LR14", name: "Kỳ Môn", hanzi: "期門", m: "LR", tag: "Mộ huyệt của Can", pos: [0.15, 0.72, 0.19], loc: "Khoang liên sườn 6, thẳng dưới núm vú, cách đường giữa ngực 4 thốn.", ben: "Sơ can hòa vị: trị đau tức ngực sườn, ợ chua, nấc cụt, viêm gan." },
+
+      // --- 13. MẠCH NHÂM (CV - 12 huyệt dọc trục giữa mặt trước) ---
+      { code: "CV1", name: "Hội Âm", hanzi: "會陰", m: "CV", tag: "Huyệt khởi đầu Nhâm - Đốc - Xung", pos: [0.0, 0.02, 0.0], loc: "Chính giữa đáy chậu (giữa hậu môn và bộ phận sinh dục ngoài).", ben: "Điều hòa âm khí, cấp cứu chết đuối, trị bệnh trĩ, rối loạn tiết niệu sinh dục." },
+      { code: "CV2", name: "Khúc Cốt", hanzi: "曲骨", m: "CV", tag: "Huyệt bờ trên xương mu", pos: [0.0, 0.10, 0.20], loc: "Chính giữa bờ trên khớp mu, dưới rốn 5 thốn.", ben: "Trị tiểu dắt, bí tiểu, di tinh, đau bụng kinh." },
+      { code: "CV3", name: "Trung Cực", hanzi: "中極", m: "CV", tag: "Mộ huyệt của Bàng Quang", pos: [0.0, 0.16, 0.215], loc: "Trên đường giữa bụng dưới, dưới rốn 4 thốn.", ben: "Ích thận khí, lợi bàng quang: trị viêm đường tiết niệu, tiểu đêm, rối loạn kinh nguyệt." },
+      { code: "CV4", name: "Quan Nguyên", hanzi: "關元", m: "CV", tag: "Mộ huyệt của Tiểu Trường / Bổ nguyên khí", pos: [0.0, 0.21, 0.225], loc: "Trên đường giữa bụng dưới, dưới rốn 3 thốn.", ben: "Đại bổ nguyên khí, hồi dương cố thoát: trị suy nhược, lạnh bụng, yếu sinh lý." },
+      { code: "CV6", name: "Khí Hải", hanzi: "氣海", m: "CV", tag: "Bể của Khí", pos: [0.0, 0.29, 0.232], loc: "Trên đường giữa bụng dưới, dưới rốn 1.5 thốn.", ben: "Bổ khí toàn thân: trị mệt mỏi mạn tính, tụt huyết áp, đau bụng dưới, táo bón." },
+      { code: "CV8", name: "Thần Khuyết", hanzi: "神闕", m: "CV", tag: "Chính giữa rốn (Chỉ cứu, cấm châm)", pos: [0.0, 0.41, 0.238], loc: "Chính giữa lỗ rốn.", ben: "Ôn dương cứu nghịch: trị đau bụng lạnh, tiêu chảy cấp, chân tay lạnh (dùng điếu ngải cứu)." },
+      { code: "CV12", name: "Trung Quản", hanzi: "中脘", m: "CV", tag: "Mộ huyệt của Vị / Hội của Phủ", pos: [0.0, 0.61, 0.235], loc: "Trên đường giữa bụng, trên rốn 4 thốn (trung điểm rốn - mỏm ức).", ben: "Huyệt chủ trị bệnh dạ dày: đau thượng vị, trào ngược, đầy hơi, khó tiêu." },
+      { code: "CV14", name: "Cự Khuyết", hanzi: "巨闕", m: "CV", tag: "Mộ huyệt của Tâm", pos: [0.0, 0.71, 0.23], loc: "Trên đường giữa bụng, trên rốn 6 thốn (dưới mỏm ức 2 thốn).", ben: "Trị đau vùng tim, hồi hộp, ợ chua, nôn mửa, lo âu." },
+      { code: "CV17", name: "Chiên Trung", hanzi: "膻中", m: "CV", tag: "Mộ huyệt của Tâm Bào / Hội của Khí", pos: [0.0, 0.88, 0.235], loc: "Chính giữa xương ức, ngang khoang liên sườn 4 (đường nối hai núm vú).", ben: "Điều khí khoan hung: trị tức ngực, khó thở, hen suyễn, stress, thiếu sữa." },
+      { code: "CV22", name: "Thiên Đột", hanzi: "天突", m: "CV", tag: "Huyệt hõm ức", pos: [0.0, 1.18, 0.135], loc: "Chỗ lõm chính giữa bờ trên xương ức (hõm ức).", ben: "Thông khí lợi hầu: trị ho, hen suyễn, khàn tiếng, nuốt nghẹn, nấc cụt." },
+      { code: "CV23", name: "Liêm Tuyền", hanzi: "廉泉", m: "CV", tag: "Huyệt dưới cằm", pos: [0.0, 1.33, 0.125], loc: "Chỗ lõm phía trên xương móng ở đường giữa cổ trước.", ben: "Lợi hầu khai âm: trị nói ngọng, cứng lưỡi, khó nuốt, viêm họng." },
+      { code: "CV24", name: "Thừa Tương", hanzi: "承漿", m: "CV", tag: "Huyệt rãnh cằm", pos: [0.0, 1.39, 0.195], loc: "Chỗ lõm chính giữa rãnh môi - cằm.", ben: "Trị méo miệng, liệt mặt, sưng lợi, đau răng hàm dưới." },
+
+      // --- 14. MẠCH ĐỐC (GV - 12 huyệt dọc trục giữa mặt sau & đầu) ---
+      { code: "GV1", name: "Trường Cường", hanzi: "長強", m: "GV", tag: "Lạc huyệt Mạch Đốc", pos: [0.0, 0.08, -0.13], loc: "Chính giữa khoảng nối đầu chót xương cụt và hậu môn.", ben: "Đặc trị bệnh trĩ, sa trực tràng, đau vùng xương cụt, tiêu chảy." },
+      { code: "GV3", name: "Yêu Dương Quan", hanzi: "腰陽關", m: "GV", tag: "Huyệt vùng thắt lưng", pos: [0.0, 0.30, -0.185], loc: "Chỗ lõm dưới mỏm gai đốt sống thắt lưng L4.", ben: "Ôn dương tán hàn: trị đau thắt lưng, đau thần kinh tọa, liệt chi dưới." },
+      { code: "GV4", name: "Mệnh Môn", hanzi: "命門", m: "GV", tag: "Cửa của Sinh Mệnh", pos: [0.0, 0.42, -0.185], loc: "Chỗ lõm dưới mỏm gai đốt sống thắt lưng L2 (đối diện rốn ra sau).", ben: "Bổ thận tráng dương, mạnh lưng gối: trị đau thắt lưng, lạnh người, sinh lý yếu." },
+      { code: "GV9", name: "Chí Dương", hanzi: "至陽", m: "GV", tag: "Huyệt giữa lưng", pos: [0.0, 0.80, -0.19], loc: "Chỗ lõm dưới mỏm gai đốt sống ngực T7 (ngang góc dưới xương bả vai).", ben: "Khoan hung lợi đởm: trị đau lưng trên, tức ngực, vàng da." },
+      { code: "GV12", name: "Thân Trụ", hanzi: "身柱", m: "GV", tag: "Trụ cột thân thể", pos: [0.0, 1.04, -0.185], loc: "Chỗ lõm dưới mỏm gai đốt sống ngực T3.", ben: "Bổ phế khí, tăng sức đề kháng cho trẻ em, trị ho, đau lưng." },
+      { code: "GV14", name: "Đại Chùy", hanzi: "大椎", m: "GV", tag: "Hội của các kinh Dương", pos: [0.0, 1.24, -0.16], loc: "Chỗ lõm ngay dưới mỏm gai đốt sống cổ C7 (đốt sống nhô cao nhất khi cúi cổ).", ben: "Thanh nhiệt hạ sốt, giải cảm, trị cứng cổ vai gáy, tăng miễn dịch." },
+      { code: "GV15", name: "Á Môn", hanzi: "瘂門", m: "GV", tag: "Huyệt sau gáy", pos: [0.0, 1.37, -0.13], loc: "Chính giữa gáy, trên chân tóc sau gáy 0.5 thốn (dưới đốt sống cổ C1).", ben: "Khai khiếu lợi ngôn: trị câm điếc, nói ngọng, đau cứng gáy, động kinh." },
+      { code: "GV16", name: "Phong Phủ", hanzi: "風府", m: "GV", tag: "Bể của Tủy / Cửa Phong tà", pos: [0.0, 1.42, -0.14], loc: "Chỗ lõm ngay dưới ụ chẩm ngoài ở chính giữa sau gáy.", ben: "Khu phong tỉnh thần: trị cảm mạo, đau đầu sau gáy, chóng mặt, trúng gió." },
+      { code: "GV20", name: "Bách Hội", hanzi: "百會", m: "GV", tag: "Hội của trăm kinh mạch", pos: [0.0, 1.79, -0.02], loc: "Chính giữa đỉnh đầu (giao điểm đường dọc giữa đầu và đường nối hai đỉnh tai).", ben: "Nâng dương khí, định thần: trị đau đỉnh đầu, chóng mặt, mất ngủ, sa tạng phủ." },
+      { code: "GV23", name: "Thượng Tinh", hanzi: "上星", m: "GV", tag: "Huyệt vùng trán trên", pos: [0.0, 1.70, 0.14], loc: "Trên đường dọc giữa đầu, vào trong chân tóc trán 1 thốn.", ben: "Thông mũi sáng mắt: trị viêm xoang, nghẹt mũi, chảy máu cam, đau đầu." },
+      { code: "GV25", name: "Tố Liêu", hanzi: "素髎", m: "GV", tag: "Chóp mũi", pos: [0.0, 1.47, 0.24], loc: "Chính giữa đỉnh chóp mũi.", ben: "Hồi dương cứu nghịch: tụt huyết áp, ngất xỉu, mũi đỏ, nghẹt mũi." },
+      { code: "GV26", name: "Nhân Trung", hanzi: "人中", m: "GV", tag: "Huyệt cấp cứu hàng đầu", pos: [0.0, 1.43, 0.215], loc: "Rãnh nhân trung dưới mũi (điểm nối 1/3 trên và 2/3 dưới của rãnh).", ben: "Khai khiếu tỉnh thần: cấp cứu ngất xỉu, trúng gió, co giật, đau thắt lưng cấp." },
+
+      // --- 15. KỲ HUYỆT NGOÀI KINH (EX - 6 huyệt phổ biến) ---
+      { code: "EX-HN1", name: "Tứ Thần Thông", hanzi: "四神聰", m: "EX", tag: "4 huyệt quanh Bách Hội", pos: [0.045, 1.785, -0.02], loc: "Nhóm 4 huyệt cách huyệt Bách Hội 1 thốn về 4 phía trước, sau, trái, phải.", ben: "Tăng cường trí nhớ, trị mất ngủ, đau đầu, chóng mặt, suy nhược thần kinh.", sideMode: "bilateral" },
+      { code: "EX-HN3", name: "Ấn Đường", hanzi: "印堂", m: "EX", tag: "Kỳ huyệt vùng trán", pos: [0.0, 1.58, 0.21], loc: "Điểm chính giữa đường nối hai đầu lông mày.", ben: "An thần dễ ngủ, giảm đau đầu vùng trán, thông mũi, giảm căng thẳng.", sideMode: "center" },
+      { code: "EX-HN5", name: "Thái Dương", hanzi: "太陽", m: "EX", tag: "Kỳ huyệt thái dương", pos: [0.15, 1.56, 0.11], loc: "Chỗ lõm sau điểm giữa đường nối đuôi lông mày và khóe mắt ngoài 1 thốn.", ben: "Đặc trị đau nửa đầu, nhức头 vùng thái dương, mỏi mắt, đau răng.", sideMode: "bilateral" },
+      { code: "EX-B1", name: "Định Suyễn", hanzi: "定喘", m: "EX", tag: "Kỳ huyệt trị hen suyễn", pos: [0.04, 1.24, -0.165], loc: "Từ huyệt Đại Chùy (dưới C7) đo ngang ra hai bên 0.5 thốn.", ben: "Đặc trị hen phế quản, ho khó thở, viêm phế quản, đau cứng cổ gáy.", sideMode: "bilateral" },
+      { code: "EX-B7", name: "Yêu Nhãn", hanzi: "腰眼", m: "EX", tag: "Mắt thắt lưng", pos: [0.14, 0.30, -0.175], loc: "Chỗ lõm hai bên thắt lưng ngang mức dưới mỏm gai đốt sống L4 đo ra 3.5 thốn.", ben: "Đặc trị đau mỏi thắt lưng, đau cơ lưng, lao lực vùng lưng.", sideMode: "bilateral" },
+      { code: "EX-LE5", name: "Tất Nhãn", hanzi: "膝眼", m: "EX", tag: "Mắt gối trong & ngoài", pos: [0.175, -0.74, 0.125], loc: "Hai chỗ lõm hai bên dây chằng bánh chè khi gập đầu gối (gồm Nội Tất Nhãn & Độc Tỵ).", ben: "Đặc trị thoái hóa khớp gối, tràn dịch khớp gối, đau nhức đầu gối.", sideMode: "bilateral" }
+    ];
+
+    // =========================================================================
+    // 2B. X EXPAND 135 ACUPOINTS INTO 246 3D MESH INSTANCE NODES
+    // =========================================================================
+    const NODES_3D = [];
+    ACUPOINTS_DB.forEach((pt, dbIdx) => {
+      const meta = MERIDIAN_LOOKUP[pt.m];
+      if (meta.bilateral === false || pt.sideMode === "center") {
+        NODES_3D.push({
+          pt,
+          dbIdx,
+          pos: new THREE.Vector3(pt.pos[0], pt.pos[1], pt.pos[2]),
+          side: "C",
+          sideLabel: "Trục giữa"
+        });
+      } else {
+        NODES_3D.push({
+          pt,
+          dbIdx,
+          pos: new THREE.Vector3(Math.abs(pt.pos[0]), pt.pos[1], pt.pos[2]),
+          side: "L",
+          sideLabel: "Bên Trái"
+        });
+        NODES_3D.push({
+          pt,
+          dbIdx,
+          pos: new THREE.Vector3(-Math.abs(pt.pos[0]), pt.pos[1], pt.pos[2]),
+          side: "R",
+          sideLabel: "Bên Phải"
+        });
+      }
+    });
+
+    const MEDICAL_SPECIAL_PROFILES = {
+      LI4: {
+        muscles: "Cơ gian cốt mu tay I, sâu hơn là đầu ngang cơ khép ngón cái.",
+        nerves: "Nhánh nông thần kinh quay (cảm giác mu tay) và nhánh sâu thần kinh trụ (vận động cơ gian cốt).",
+        vessels: "Mạng tĩnh mạch mu bàn tay; lớp sâu có động mạch quay đi qua khoang gian cốt I.",
+        tcmAction: "Sơ phong giải biểu, trấn thống khai khiếu, thông điều khí huyết vùng đầu mặt ('Diện khẩu Hợp Cốc thu').",
+        mechanism: "Kích hoạt sợi thần kinh hướng tâm A-beta và A-delta, thúc đẩy giải phóng Endorphin và Enkephalin nội sinh tại sừng sau tủy sống và chất xám quanh cống não (PAG), ức chế dẫn truyền tín hiệu đau vùng đầu mặt.",
+        acupressure: "Dùng ngón tay cái bàn tay đối diện ấn vuông góc vào hõm giữa xương bàn tay 1 và 2 (hơi chếch về phía xương bàn tay 2). Day tròn lực vừa phải trong 1–3 phút tới khi có cảm giác căng tức nặng lan xuống ngón trỏ (đắc khí).",
+        needling: "Châm thẳng 0.5 – 1.0 thốn (không để bệnh nhân nắm chặt tay khi châm). Cứu điếu ngải 5–10 phút.",
+        combos: [
+          { code: "LR3", note: "Tứ Quan huyệt: bình can tức phong, giảm stress & đau đầu" },
+          { code: "LI11", note: "Thanh nhiệt hạ sốt, giảm viêm họng & dị ứng" },
+          { code: "ST6", note: "Chủ trị đau răng hàm dưới & liệt dây thần kinh VII" }
+        ],
+        caution: "CHỐNG CHỈ ĐỊNH TUYỆT ĐỐI CHO PHỤ NỮ CÓ THAI (có thể kích thích co bóp tử cung gây sảy thai hoặc sinh non)."
+      },
+      ST36: {
+        muscles: "Cơ chày trước, sâu hơn là màng gian cốt cẳng chân.",
+        nerves: "Nhánh bì cẳng chân ngoài, lớp sâu có thần kinh mác sâu (nhánh của thần kinh mác chung).",
+        vessels: "Động mạch và tĩnh mạch chày trước đi sát màng gian cốt.",
+        tcmAction: "Kiện tỳ hòa vị, điều trung ích khí, thông kinh hoạt lạc, phù chính bồi nguyên ('Đỗ phúc Tam Lý lưu').",
+        mechanism: "Điều hòa trục não - ruột thông qua dây thần kinh phế vị (Vagus nerve), tăng nhu động dạ dày - ruột, kích thích đại thực bào và tế bào NK nâng cao miễn dịch dịch thể.",
+        acupressure: "Ngồi thả lỏng gối gập 90°, dùng ngón cái ấn sâu vào điểm dưới mắt gối ngoài 3 thốn (cách mào xương chày 1 khoát ngón tay). Day ấn theo chiều kim đồng hồ 2–3 phút mỗi bên sáng và tối.",
+        needling: "Châm thẳng 1.0 – 1.5 thốn. Cứu ngải 10–15 phút để ôn bổ dương khí, tăng sức đề kháng.",
+        combos: [
+          { code: "CV12", note: "Chủ trị đau dạ dày, trào ngược & đầy hơi khó tiêu" },
+          { code: "SP6", note: "Đại bổ khí huyết, phục hồi suy nhược cơ thể" },
+          { code: "PC6", note: "Chống buồn nôn, say tàu xe & rối loạn tiêu hóa" }
+        ],
+        caution: "An toàn cao. Tránh day ấn quá mạnh gây bầm tím ở người đang dùng thuốc chống đông máu hoặc rối loạn đông máu."
+      },
+      PC6: {
+        muscles: "Đi qua khe giữa gân cơ gan tay lớn và gân cơ gan tay bé, sâu là cơ gấp các ngón nông và sâu.",
+        nerves: "Thần kinh bì cẳng tay trong; ngay phía dưới là thân chính dây thần kinh giữa (Median nerve).",
+        vessels: "Động mạch và tĩnh mạch gian cốt trước, mạng mạch cổ tay trước.",
+        tcmAction: "Ninh tâm an thần, khoan hung lý khí, hòa vị giáng nghịch ('Nội Quan mưu tâm hung').",
+        mechanism: "Điều biến hệ thần kinh thực vật (giảm cường giao cảm, tăng trương lực phó giao cảm), ổn định nhịp tim và ức chế trung khu nôn ở hành não.",
+        acupressure: "Ngửa cẳng tay, đặt 3 ngón tay (trỏ, giữa, áp út) từ lằn chỉ cổ tay đo lên, dùng đầu ngón cái ấn nhẹ nhàng vào khe giữa hai gân nổi rõ. Day chậm 1–2 phút khi hồi hộp, say xe hoặc buồn nôn.",
+        needling: "Châm thẳng 0.5 – 0.8 thốn. Tránh châm quá sâu hoặc vê kim thô bạo làm tổn thương dây thần kinh giữa.",
+        combos: [
+          { code: "HT7", note: "An thần định chí, trị mất ngủ & tim đập nhanh" },
+          { code: "SP4", note: "Bát mạch giao hội: đặc trị đau vùng ngực & thượng vị" },
+          { code: "CV17", note: "Giải tỏa tức ngực, khó thở & lo âu căng thẳng" }
+        ],
+        caution: "Dây thần kinh giữa nằm ngay bên dưới huyệt: nếu thấy cảm giác điện giật tê buốt chạy dọc ra ngón giữa thì cần giảm lực ấn ngay."
+      },
+      SP6: {
+        muscles: "Bờ sau xương chày, đi qua cơ gấp dài các ngón chân và cơ chày sau.",
+        nerves: "Thần kinh hiển (nhánh của thần kinh đùi); lớp sâu có thần kinh chày.",
+        vessels: "Tĩnh mạch hiển lớn ở lớp nông; động mạch và tĩnh mạch chày sau ở lớp sâu.",
+        tcmAction: "Tư âm dưỡng huyết, kiện tỳ lợi thấp, sơ can ích thận (Hội của 3 kinh Âm ở chân: Can - Tỳ - Thận).",
+        mechanism: "Điều hòa trục hạ đồi - tuyến yên - buồng trứng (HPO), cải thiện tuần hoàn vùng tiểu khung và thúc đẩy tiết Melatonin tự nhiên hỗ trợ giấc ngủ sâu.",
+        acupressure: "Đặt 4 ngón tay khép kín từ đỉnh cao mắt cá chân trong đo lên, dùng ngón cái day ấn vào điểm sát bờ sau xương chày trong 2–3 phút mỗi tối trước khi ngủ.",
+        needling: "Châm thẳng 1.0 – 1.5 thốn. Cứu ngải 5–10 phút.",
+        combos: [
+          { code: "HT7", note: "Tâm Thận tương giao: đặc trị mất ngủ kinh niên" },
+          { code: "CV4", note: "Điều hòa kinh nguyệt, đau bụng kinh & bổ thận âm" },
+          { code: "ST36", note: "Kiện tỳ ích khí, nâng cao thể trạng toàn diện" }
+        ],
+        caution: "CHỐNG CHỈ ĐỊNH CHO PHỤ NỮ CÓ THAI (tác động mạnh lên khí huyết vùng tiểu khung dễ gây co bóp tử cung)."
+      },
+      GV20: {
+        muscles: "Cân sọ (Galea aponeurotica), không có lớp cơ dày che phủ.",
+        nerves: "Nhánh tận của thần kinh chẩm lớn (C2) và nhánh trên ổ mắt của thần kinh sinh ba (V1).",
+        vessels: "Mạng nối động mạch thái dương nông và động mạch chẩm hai bên.",
+        tcmAction: "Tỉnh thần khai khiếu, bình can tức phong, thăng dương cố thoát (Hội của trăm kinh mạch).",
+        mechanism: "Tăng cường lưu lượng tuần hoàn máu não vùng vỏ não trước trán và đỉnh, điều hòa sóng não Alpha giúp giảm căng thẳng thần kinh.",
+        acupressure: "Dùng phần thịt đầu ngón tay giữa ấn thẳng đứng từ trên xuống vào chính giữa đỉnh đầu, day tròn nhẹ nhàng theo chiều kim đồng hồ trong 1–2 phút.",
+        needling: "Châm luồn dưới da (châm ngang) hướng ra trước hoặc ra sau sâu 0.5 – 0.8 thốn. Cứu ngải 5–10 phút khi tụt huyết áp, sa tàng phủ.",
+        combos: [
+          { code: "EX-HN1", note: "Tứ Thần Thông: tăng cường trí nhớ, trị chóng mặt & mất ngủ" },
+          { code: "GV26", note: "Cấp cứu ngất xỉu, choáng váng & hạ huyết áp tư thế" },
+          { code: "LR3", note: "Bình can tiềm dương, trị đau đỉnh đầu do tăng huyết áp" }
+        ],
+        caution: "Không châm thẳng đứng; cẩn trọng hoặc tránh tác động mạnh ở trẻ nhỏ chưa liền thóp và bệnh nhân tăng huyết áp ác tính đang lên cơn."
+      },
+      GV26: {
+        muscles: "Cơ vòng miệng (Orbicularis oris).",
+        nerves: "Nhánh má của thần kinh mặt (VII) và nhánh dưới ổ mắt của thần kinh hàm trên (V2).",
+        vessels: "Động mạch và tĩnh mạch môi trên.",
+        tcmAction: "Khai khiếu tỉnh thần, thanh nhiệt tức phong, thông kinh hoạt lạc vùng cột sống.",
+        mechanism: "Kích thích mạnh thụ thể đau vùng nhân trung gửi xung động trực tiếp lên hệ lưới hoạt hóa hướng lên (ARAS) ở thân não, giúp phục hồi ý thức nhanh.",
+        acupressure: "Trong tình huống ngất xỉu hoặc choáng: dùng đầu móng tay cái bấm mạnh chếch lên trên vào 1/3 trên rãnh nhân trung trong 15–30 giây.",
+        needling: "Châm chếch hướng lên vách ngăn mũi sâu 0.3 – 0.5 thốn. Không cứu ngải tại huyệt này.",
+        combos: [
+          { code: "PC9", note: "Khai khiếu cấp cứu say nắng, ngất xỉu & trúng gió" },
+          { code: "KI1", note: "Hồi dương cứu nghịch, hạ hỏa & phục hồi tri giác" },
+          { code: "BL40", note: "Giải co cứng cơ lưng cấp tính (đau lưng cấp không cúi được)" }
+        ],
+        caution: "Vùng tam giác nguy hiểm của mặt (tĩnh mạch thông xoang hang): tuyệt đối giữ vô khuẩn, tránh nặn bóp mạnh gây bầm dập hoặc nhiễm trùng."
+      },
+      BL40: {
+        muscles: "Chính giữa hố khoeo, giữa gân cơ nhị đầu đùi và gân cơ bán gân.",
+        nerves: "Thần kinh bì đùi sau ở lớp nông; sâu bên dưới là thần kinh chày (Tibial nerve).",
+        vessels: "Tĩnh mạch khoeo và động mạch khoeo nằm ở lớp sâu trung tâm hố khoeo.",
+        tcmAction: "Thư cân hoạt lạc, thanh huyết tả nhiệt, cường yêu tất ('Yêu bối Ủy Trung cầu').",
+        mechanism: "Giãn phản xạ co thắt nhóm cơ dựng sống vùng thắt lưng thông qua cung phản xạ tủy sống L4–S2 và cải thiện tưới máu rễ thần kinh tọa.",
+        acupressure: "Ngồi thả lỏng chân, dùng ngón giữa hai tay ấn nhẹ vào chính giữa nếp gấp sau khoeo chân, day tròn 1–2 phút mỗi bên.",
+        needling: "Châm thẳng 0.5 – 1.0 thốn (hoặc chích nặn máu tĩnh mạch nông vùng khoeo trong đau lưng cấp thực nhiệt).",
+        combos: [
+          { code: "BL23", note: "Bổ thận cường yêu: đặc trị đau thắt lưng cấp & mạn tính" },
+          { code: "GB30", note: "Thông kinh hoạt lạc, điều trị đau thần kinh tọa lan xuống chân" },
+          { code: "BL57", note: "Thư giãn cơ bắp chân, giảm chuột rút & căng cứng gân gót" }
+        ],
+        caution: "Động mạch và tĩnh mạch khoeo nằm ngay dưới huyệt: KHÔNG ấn quá mạnh hoặc châm quá sâu gây tổn thương mạch máu lớn."
+      },
+      GB21: {
+        muscles: "Cơ thang (Trapezius), sâu hơn là cơ trên gai và cơ nâng vai.",
+        nerves: "Thần kinh phụ (dây XI), nhánh của đám rối cổ (C3–C4) và thần kinh trên vai.",
+        vessels: "Nhánh ngang của động mạch và tĩnh mạch cổ ngang.",
+        tcmAction: "Khu phong thanh nhiệt, thư cân hoạt lạc, thông nhũ hạ khí.",
+        mechanism: "Giải phóng các điểm kích hoạt đau (Trigger points) trong bó trên cơ thang, tăng tuần hoàn máu vùng cổ vai gáy.",
+        acupressure: "Dùng bàn tay đối diện vắt qua vai, dùng đầu ngón giữa hoặc ngón cái bóp day điểm cao nhất ở giữa bờ vai trong 2 phút mỗi bên.",
+        needling: "Châm thẳng 0.5 – 0.8 thốn. TUYỆT ĐỐI KHÔNG CHÂM SÂU.",
+        combos: [
+          { code: "GB20", note: "Giải tỏa căng cứng cổ vai gáy & đau đầu sau gáy" },
+          { code: "LI4", note: "Hành khí hoạt huyết, giảm đau mỏi vai gáy cấp tính" },
+          { code: "SI11", note: "Điều trị đau bả vai lan xuống cánh tay" }
+        ],
+        caution: "NGUY CƠ TRÀN KHÍ MÀNG PHỔI: Đỉnh phổi nằm ngay dưới huyệt Kiên Tỉnh — tuyệt đối không châm sâu quá 0.8 thốn. CHỐNG CHỈ ĐỊNH CHO PHỤ NỮ CÓ THAI."
+      },
+      CV17: {
+        muscles: "Nằm trên màng xương ức giữa chỗ bám hai cơ ngực lớn.",
+        nerves: "Nhánh bì trước của thần kinh gian sườn IV.",
+        vessels: "Nhánh xuyên của động mạch và tĩnh mạch ngực trong.",
+        tcmAction: "Điều khí giáng nghịch, khoan hung lợi cách, thông nhũ (Hội của Khí).",
+        mechanism: "Điều hòa nhịp thở và phản xạ phế quản - tim, giảm cảm giác co thắt lồng ngực do lo âu hoặc căng thẳng thần kinh.",
+        acupressure: "Dùng phần gốc bàn tay hoặc đầu ngón giữa xoa tròn nhẹ nhàng dọc giữa xương ức ngang hai núm vú trong 1–2 phút kết hợp hít thở sâu.",
+        needling: "Châm ngang (luồn dưới da hướng lên trên hoặc xuống dưới) sâu 0.3 – 0.5 thốn. Cứu ngải 5–10 phút.",
+        combos: [
+          { code: "PC6", note: "Khoan hung lý khí: giảm tức ngực, hồi hộp & lo âu" },
+          { code: "LU1", note: "Tuyên phế bình suyễn, giảm ho & khó thở" },
+          { code: "SI1", note: "Thông tuyến sữa, trị thiếu sữa & căng tức ngực sau sinh" }
+        ],
+        caution: "Xương ức ở một số người có thể có lỗ khuyết bẩm sinh (lỗ xương ức): TUYỆT ĐỐI KHÔNG CHÂM THẲNG ĐỨNG tránh đâm vào trung thất và màng ngoài tim."
+      },
+      KI1: {
+        muscles: "Cân gan chân, cơ gấp ngắn các ngón chân và cơ giun II.",
+        nerves: "Thần kinh gan chân trong (nhánh của thần kinh chày).",
+        vessels: "Cung động mạch gan chân sâu.",
+        tcmAction: "Tư âm giáng hỏa, tỉnh thần khai khiếu, định chí an thần.",
+        mechanism: "Kích thích thụ thể cảm giác sâu gan bàn chân giúp điều hòa trương lực mạch máu ngoại vi, hạ huyết áp nhẹ và làm dịu hưng phấn vỏ não.",
+        acupressure: "Ngâm chân nước ấm 10 phút, sau đó dùng ngón tay cái day ấn mạnh vào hõm 1/3 trước gan bàn chân trong 2–3 phút mỗi bên trước khi ngủ.",
+        needling: "Châm thẳng 0.5 – 0.8 thốn. Có thể dán cao thuốc hoặc cứu ngải 5–10 phút để dẫn hỏa quy nguyên.",
+        combos: [
+          { code: "HT7", note: "Thủy Hỏa ký tế: đặc trị mất ngủ, bốc hỏa & hồi hộp" },
+          { code: "GV20", note: "Cân bằng âm dương trên dưới, trị chóng mặt & tăng huyết áp" },
+          { code: "KI3", note: "Tư bổ thận âm, giảm nóng bừng mặt & ù tai" }
+        ],
+        caution: "Da gan bàn chân dày và nhạy cảm đau: nên day bấm bằng lực tăng dần đều, tránh dùng vật sắc nhọn chọc mạnh gây tổn thương cân gan chân."
+      }
+    };
+
+    function buildFullMedicalProfile(pt) {
+      const special = MEDICAL_SPECIAL_PROFILES[pt.code];
+      const meta = MERIDIAN_LOOKUP[pt.m];
+      const [x, y, z] = pt.pos;
+
+      let regionAnatomy = {
+        muscles: "Lớp cân cơ nông và sâu vùng thân mình.",
+        nerves: "Nhánh bì thần kinh tủy sống tương ứng tiết đoạn.",
+        vessels: "Mạng lưới động tĩnh mạch nông và nhánh xuyên lân cận.",
+        acupressure: "Dùng đầu ngón tay cái hoặc ngón giữa ấn vuông góc lực vừa phải, day tròn nhẹ 1–3 phút tới khi có cảm giác tức nặng êm dịu (đắc khí).",
+        needling: "Châm thẳng hoặc xiên 0.5 – 1.0 thốn tùy độ dày cơ; cứu ngải 5–10 phút.",
+        caution: "Giữ vệ sinh vùng da trước khi tác động; tránh day ấn mạnh lên vùng da viêm loét, khối u hoặc người rối loạn đông máu."
+      };
+
+      if (y > 1.32) {
+        regionAnatomy = {
+          muscles: "Hệ cơ bám da mặt / cân sọ / cơ thái dương hoặc cơ vùng chẩm gáy.",
+          nerves: "Nhánh của dây thần kinh sinh ba (V1, V2, V3), thần kinh mặt (VII) hoặc thần kinh chẩm lớn (C2).",
+          vessels: "Nhánh động mạch thái dương nông, động mạch mặt hoặc động mạch chẩm.",
+          acupressure: "Dùng phần thịt đầu ngón trỏ hoặc ngón giữa day nhẹ nhàng theo vòng tròn nhỏ 1–2 phút; vùng mặt nên thực hiện đối xứng hai bên.",
+          needling: "Châm ngang luồn dưới da hoặc châm nông 0.2 – 0.5 thốn theo hướng cơ mặt.",
+          caution: "Vùng đầu mặt nhiều mạch máu nông và gần ổ mắt/neu: chỉ xoa bóp lực nhẹ, tuyệt đối không châm sâu thẳng đứng."
+        };
+      } else if (y >= 0.05 && Math.abs(x) < 0.28) {
+        if (z >= 0) {
+          regionAnatomy = {
+            muscles: y > 0.75 ? "Cơ ngực lớn, cơ gian sườn ngoài và trong." : "Cơ thẳng bụng, cân cơ chéo bụng ngoài và trong.",
+            nerves: "Nhánh bì trước và bên của thần kinh gian sườn (T2 – T12).",
+            vessels: "Nhánh động mạch ngực trong hoặc động mạch thượng vị trên/dưới.",
+            acupressure: "Nằm ngửa thả lỏng cơ thành bụng/ngực, dùng đầu ngón tay day tròn êm dịu theo chiều kim đồng hồ 2–3 phút sau bữa ăn ít nhất 1 giờ.",
+            needling: y > 0.75 ? "Châm xiên hoặc châm ngang dọc khoang liên sườn 0.3 – 0.5 thốn." : "Châm thẳng 0.8 – 1.2 thốn; cứu ngải 10 phút.",
+            caution: y > 0.75
+              ? "CẢNH BÁO TRÀN KHÍ MÀNG PHỔI: Vùng lồng ngực có phổi và tim nằm ngay bên dưới — tuyệt đối không châm thẳng hoặc châm sâu."
+              : "Không day bấm hoặc châm sâu vùng bụng dưới ở phụ nữ có thai, người đang bí tiểu cấp hoặc nghi ngờ viêm ruột thừa."
+          };
+        } else {
+          regionAnatomy = {
+            muscles: y > 0.65 ? "Cơ thang, cơ trám, cơ dựng sống lưng." : "Cơ lưng rộng, cơ dựng sống vùng thắt lưng.",
+            nerves: "Nhánh sau của thần kinh gai sống ngực / thắt lưng (T1 – L5).",
+            vessels: "Nhánh sau của động mạch gian sườn sau hoặc động mạch thắt lưng.",
+            acupressure: "Nằm sấp hoặc ngồi tựa lưng thoải mái, dùng ngón cái ấn từ nhẹ đến nặng dọc rãnh cơ cạnh cột sống 2–3 phút mỗi bên.",
+            needling: y > 0.65 ? "Châm xiên hướng vào cột sống 0.5 – 0.8 thốn." : "Châm thẳng 1.0 – 1.5 thốn.",
+            caution: y > 0.65
+              ? "VÙNG LƯNG TRÊN GẦN PHỔI: Không châm thẳng hoặc châm quá 0.8 thốn để phòng ngừa tràn khí màng phổi."
+              : "Cẩn trọng ở người thoát vị đĩa đệm nặng hoặc loãng xương cột sống."
+          };
+        }
+      } else if (Math.abs(x) >= 0.28 && y >= -0.2) {
+        regionAnatomy = {
+          muscles: y > 0.65 ? "Cơ delta, cơ nhị đầu hoặc cơ tam đầu cánh tay." : "Nhóm cơ gấp/duỗi cẳng tay hoặc cơ gian cốt bàn tay.",
+          nerves: "Nhánh của thần kinh quay, thần kinh giữa, thần kinh trụ hoặc thần kinh bì cẳng tay.",
+          vessels: "Nhánh động mạch cánh tay, động mạch quay hoặc động mạch trụ.",
+          acupressure: "Thả lỏng cánh tay, dùng ngón cái bàn tay đối diện ấn vuông góc và day tròn 1–2 phút tới khi cảm giác căng tức nhẹ lan dọc cánh tay.",
+          needling: "Châm thẳng 0.5 – 1.0 thốn (riêng vùng đầu ngón tay chỉ châm nông 0.1 thốn).",
+          caution: "Tránh châm hoặc ấn mạnh trực tiếp lên thân dây thần kinh lớn hoặc lòng động mạch quay/trụ đang đập rõ."
+        };
+      } else {
+        regionAnatomy = {
+          muscles: y > -0.75 ? "Cơ mông lớn, cơ tứ đầu đùi hoặc cơ nhị đầu đùi." : "Cơ chày trước, cơ sinh đôi cẳng chân hoặc cơ gấp/duỗi bàn chân.",
+          nerves: "Thần kinh tọa, thần kinh đùi, thần kinh mác chung hoặc thần kinh chày.",
+          vessels: "Nhánh động mạch đùi, động mạch chày trước/sau hoặc động mạch mu chân.",
+          acupressure: "Ngồi thả lỏng chân, dùng ngón tay cái ấn sâu và day tròn 2–3 phút mỗi bên để kích hoạt tuần hoàn chi dưới.",
+          needling: "Châm thẳng 0.8 – 1.5 thốn (vùng bàn chân châm nông 0.3 – 0.5 thốn).",
+          caution: "Tránh day ấn mạnh lên vùng tĩnh mạch đang giãn phồng nặng (suy giãn tĩnh mạch chi dưới độ nặng) hoặc vết loét bàn chân đái tháo đường."
+        };
+      }
+
+      const defaultCombos = (() => {
+        const sameMeridianPts = ACUPOINTS_DB.filter((p) => p.m === pt.m && p.code !== pt.code);
+        const pick1 = sameMeridianPts[0] || ACUPOINTS_DB[0];
+        const classicCompanion =
+          pt.m === "LU" || pt.m === "LI" ? "LI4" :
+          pt.m === "ST" || pt.m === "SP" ? "ST36" :
+          pt.m === "HT" || pt.m === "PC" ? "PC6" :
+          pt.m === "BL" || pt.m === "KI" ? "BL40" :
+          pt.m === "GB" || pt.m === "LR" ? "LR3" : "GV20";
+        const compObj = ACUPOINTS_DB.find((p) => p.code === classicCompanion && p.code !== pt.code) || sameMeridianPts[1] || ACUPOINTS_DB[1];
+        return [
+          { code: pick1.code, note: `Phối cùng kinh ${meta.short}: tăng cường dẫn khí & hiệu quả tại chỗ` },
+          { code: compObj.code, note: `Huyệt đặc hiệu hiệp đồng điều hòa tạng phủ & giảm triệu chứng` }
+        ];
+      })();
+
+      return {
+        muscles: special?.muscles || regionAnatomy.muscles,
+        nerves: special?.nerves || regionAnatomy.nerves,
+        vessels: special?.vessels || regionAnatomy.vessels,
+        tcmAction: special?.tcmAction || `Sơ thông ${meta.name}, điều hòa khí huyết cục bộ và toàn thân (${pt.tag}).`,
+        indications: pt.ben,
+        mechanism: special?.mechanism || "Kích thích các thụ thể cơ học (Mechanoreceptors) và sợi thần kinh hướng tâm tại chỗ, thúc đẩy giãn mạch vi tuần hoàn và điều hòa phản xạ thần kinh tự chủ.",
+        acupressure: special?.acupressure || regionAnatomy.acupressure,
+        needling: special?.needling || regionAnatomy.needling,
+        combos: special?.combos || defaultCombos,
+        caution: special?.caution || regionAnatomy.caution
+      };
+    }
+
+    // =========================================================================
+    // 4. KHỞI TẠO THREE.JS KHI CỬA SỔ LOAD HOÀN TẤT
+    // =========================================================================
+    window.onload = function () {
+      const container = document.getElementById("canvas-container");
+      const scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x050a14, 0.048);
+
+      const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.set(0, 0.25, 4.95);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.15;
+      container.appendChild(renderer.domElement);
+
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.06;
+      controls.minDistance = 0.75;
+      controls.maxDistance = 8.5;
+      controls.target.set(0, 0.1, 0);
+
+      // Ánh sáng
+      scene.add(new THREE.AmbientLight(0x38bdf8, 0.5));
+      const dirLight1 = new THREE.DirectionalLight(0xe0f2fe, 1.15);
+      dirLight1.position.set(2.5, 4, 4);
+      scene.add(dirLight1);
+
+      const dirLight2 = new THREE.DirectionalLight(0x22d3ee, 1.25);
+      dirLight2.position.set(-3, 2, -4);
+      scene.add(dirLight2);
+
+      // =========================================================================
+      // 5. DỰNG MÔ HÌNH CƠ THỂ NGƯỜI 3D GIẢI PHẪU TỶ LỆ 8 ĐẦU (FRESNEL + WIRE)
+      // =========================================================================
+      const bodyGroup = new THREE.Group();
+      scene.add(bodyGroup);
+
+      const fresnelBodyMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          uColorBase: { value: new THREE.Color(0x0a2240) },
+          uColorRim: { value: new THREE.Color(0x38bdf8) },
+          uOpacity: { value: 0.30 }
+        },
+        vertexShader: `
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            vViewPosition = -mvPosition.xyz;
+            gl_Position = projectionMatrix * mvPosition;
+          }
+        `,
+        fragmentShader: `
+          uniform vec3 uColorBase;
+          uniform vec3 uColorRim;
+          uniform float uOpacity;
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          void main() {
+            vec3 normal = normalize(vNormal);
+            vec3 viewDir = normalize(vViewPosition);
+            float fresnel = pow(1.0 - abs(dot(normal, viewDir)), 2.2);
+            vec3 col = mix(uColorBase, uColorRim, fresnel * 0.92);
+            float alpha = clamp(uOpacity + fresnel * 0.48, 0.06, 0.92);
+            gl_FragColor = vec4(col, alpha);
+          }
+        `,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.FrontSide
+      });
+
+      const wireOverlayMaterial = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.04
+      });
+
+      function addBodyPart(geometry, pos, rot = [0, 0, 0], scale = [1, 1, 1]) {
+        const mesh = new THREE.Mesh(geometry, fresnelBodyMaterial);
+        mesh.position.set(...pos);
+        mesh.rotation.set(...rot);
+        mesh.scale.set(...scale);
+        bodyGroup.add(mesh);
+
+        const wire = new THREE.Mesh(geometry, wireOverlayMaterial);
+        wire.position.copy(mesh.position);
+        wire.rotation.copy(mesh.rotation);
+        wire.scale.copy(mesh.scale);
+        bodyGroup.add(wire);
+      }
+
+      // Đầu & Mặt
+      addBodyPart(new THREE.SphereGeometry(0.22, 32, 32), [0, 1.56, 0.01], [0, 0, 0], [0.88, 1.08, 0.98]);
+      addBodyPart(new THREE.SphereGeometry(0.145, 24, 24), [0, 1.41, 0.05], [0.25, 0, 0], [0.82, 0.95, 0.95]);
+      addBodyPart(new THREE.ConeGeometry(0.03, 0.085, 16), [0, 1.49, 0.22], [0.35, 0, 0], [0.8, 1, 1]);
+      addBodyPart(new THREE.SphereGeometry(0.04, 14, 14), [0.185, 1.50, -0.01], [0, 0, 0], [0.45, 1.15, 0.75]);
+      addBodyPart(new THREE.SphereGeometry(0.04, 14, 14), [-0.185, 1.50, -0.01], [0, 0, 0], [0.45, 1.15, 0.75]);
+
+      // Cổ
+      addBodyPart(new THREE.CylinderGeometry(0.095, 0.115, 0.22, 24), [0, 1.27, -0.01]);
+
+      // Thân & Hông
+      addBodyPart(new THREE.CylinderGeometry(0.25, 0.21, 0.48, 32), [0, 0.96, 0.02], [0, 0, 0], [1.22, 1.0, 0.78]);
+      addBodyPart(new THREE.SphereGeometry(0.115, 24, 24), [0.32, 1.12, 0.0]);
+      addBodyPart(new THREE.SphereGeometry(0.115, 24, 24), [-0.32, 1.12, 0.0]);
+      addBodyPart(new THREE.CylinderGeometry(0.205, 0.195, 0.38, 32), [0, 0.54, 0.02], [0, 0, 0], [1.12, 1.0, 0.78]);
+      addBodyPart(new THREE.CylinderGeometry(0.20, 0.225, 0.30, 32), [0, 0.21, 0.01], [0, 0, 0], [1.18, 1.0, 0.82]);
+      addBodyPart(new THREE.SphereGeometry(0.22, 28, 24), [0, 0.08, 0.0], [0, 0, 0], [1.14, 0.65, 0.82]);
+
+      // Chi trên
+      [-1, 1].forEach((side) => {
+        addBodyPart(new THREE.CylinderGeometry(0.085, 0.072, 0.46, 20), [side * 0.43, 0.87, 0.015], [0, 0, side * 0.24]);
+        addBodyPart(new THREE.SphereGeometry(0.072, 18, 18), [side * 0.50, 0.63, 0.03]);
+        addBodyPart(new THREE.CylinderGeometry(0.07, 0.052, 0.46, 20), [side * 0.56, 0.38, 0.05], [-0.08, 0, side * 0.16]);
+        addBodyPart(new THREE.SphereGeometry(0.048, 16, 16), [side * 0.61, 0.12, 0.06]);
+        addBodyPart(new THREE.BoxGeometry(0.042, 0.14, 0.095), [side * 0.64, 0.02, 0.055], [0, 0, side * 0.14]);
+        addBodyPart(new THREE.CylinderGeometry(0.012, 0.014, 0.08, 10), [side * 0.66, -0.02, 0.10], [0.45, 0, side * 0.25]);
+        for (let f = 0; f < 4; f++) {
+          const zOff = 0.08 - f * 0.022;
+          const len = f === 1 ? 0.105 : f === 2 ? 0.098 : 0.082;
+          addBodyPart(new THREE.CylinderGeometry(0.009, 0.011, len, 10), [side * 0.675, -0.09, zOff], [0, 0, side * 0.16]);
+        }
+      });
+
+      // Chi dưới
+      [-1, 1].forEach((side) => {
+        addBodyPart(new THREE.CylinderGeometry(0.135, 0.098, 0.68, 24), [side * 0.175, -0.36, 0.0], [0, 0, -side * 0.04]);
+        addBodyPart(new THREE.SphereGeometry(0.096, 20, 20), [side * 0.19, -0.74, 0.01]);
+        addBodyPart(new THREE.CylinderGeometry(0.094, 0.064, 0.72, 24), [side * 0.19, -1.14, -0.01]);
+        addBodyPart(new THREE.SphereGeometry(0.062, 18, 18), [side * 0.19, -1.53, -0.01]);
+        addBodyPart(new THREE.BoxGeometry(0.105, 0.068, 0.24), [side * 0.19, -1.75, 0.05]);
+        for (let t = 0; t < 5; t++) {
+          const xOff = side * (0.155 + t * 0.018);
+          const r = t === 0 ? 0.016 : 0.011;
+          addBodyPart(new THREE.SphereGeometry(r, 10, 10), [xOff, -1.77, 0.19], [0, 0, 0], [0.9, 0.8, 1.5]);
+        }
+      });
+
+      // Bệ đế vòng tròn công nghệ
+      const pedestalGroup = new THREE.Group();
+      pedestalGroup.position.y = -1.805;
+      scene.add(pedestalGroup);
+
+      const ring1 = new THREE.Mesh(
+        new THREE.RingGeometry(0.62, 0.65, 64),
+        new THREE.MeshBasicMaterial({ color: 0x22d3ee, side: THREE.DoubleSide, transparent: true, opacity: 0.45 })
+      );
+      ring1.rotation.x = -Math.PI / 2;
+      pedestalGroup.add(ring1);
+
+      const ring2 = new THREE.Mesh(
+        new THREE.RingGeometry(0.92, 0.94, 64),
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.22 })
+      );
+      ring2.rotation.x = -Math.PI / 2;
+      pedestalGroup.add(ring2);
+
+      const gridHelper = new THREE.GridHelper(3.4, 18, 0x1e3a5f, 0x0b1324);
+      gridHelper.position.y = -0.01;
+      pedestalGroup.add(gridHelper);
+
+      // =========================================================================
+      // 6. ĐƯỜNG KINH MẠCH (CatmullRomCurve3)
+      // =========================================================================
+      const meridiansGroup = new THREE.Group();
+      scene.add(meridiansGroup);
+
+      const meridianTubes = [];
+      MERIDIANS_META.forEach((meta) => {
+        if (meta.id === "EX") return;
+        const ptsInMeridian = ACUPOINTS_DB.filter((p) => p.m === meta.id);
+        if (ptsInMeridian.length < 2) return;
+
+        const sidesToBuild = meta.bilateral ? ["L", "R"] : ["C"];
+        sidesToBuild.forEach((s) => {
+          const sign = s === "R" ? -1 : 1;
+          const curveVectors = ptsInMeridian.map((p) => new THREE.Vector3(sign * p.pos[0], p.pos[1], p.pos[2]));
+          const curve = new THREE.CatmullRomCurve3(curveVectors, false, "catmullrom", 0.35);
+          const tubeGeo = new THREE.TubeGeometry(curve, ptsInMeridian.length * 10, 0.0042, 6, false);
+          const tubeMat = new THREE.MeshBasicMaterial({ color: meta.hex, transparent: true, opacity: 0.48 });
+          const tubeMesh = new THREE.Mesh(tubeGeo, tubeMat);
+          meridiansGroup.add(tubeMesh);
+          meridianTubes.push({ mesh: tubeMesh, meridianId: meta.id, side: s });
+        });
+      });
+
+      // =========================================================================
+      // 7. INSTANCED MESH CHO 246 ĐIỂM HUYỆT
+      // =========================================================================
+      const nodeGeo = new THREE.SphereGeometry(0.022, 16, 16);
+      const nodeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const instancedNodes = new THREE.InstancedMesh(nodeGeo, nodeMat, NODES_3D.length);
+      instancedNodes.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      scene.add(instancedNodes);
+
+      const tempColor = new THREE.Color();
+      const dummyMat = new THREE.Matrix4();
+      NODES_3D.forEach((n, idx) => {
+        const meta = MERIDIAN_LOOKUP[n.pt.m];
+        tempColor.setHex(meta.hex);
+        instancedNodes.setColorAt(idx, tempColor);
+        dummyMat.setPosition(n.pos);
+        instancedNodes.setMatrixAt(idx, dummyMat);
+      });
+      instancedNodes.instanceMatrix.needsUpdate = true;
+      if (instancedNodes.instanceColor) instancedNodes.instanceColor.needsUpdate = true;
+
+      const selRing = new THREE.Mesh(
+        new THREE.RingGeometry(0.032, 0.044, 32),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.95 })
+      );
+      selRing.visible = false;
+      scene.add(selRing);
+
+      const selRingOuter = new THREE.Mesh(
+        new THREE.RingGeometry(0.052, 0.058, 32),
+        new THREE.MeshBasicMaterial({ color: 0x22d3ee, side: THREE.DoubleSide, transparent: true, opacity: 0.65 })
+      );
+      selRingOuter.visible = false;
+      scene.add(selRingOuter);
+
+      // =========================================================================
+      // 8. BỘ LỌC VÀ TRẠNG THÁI HIỂN THỊ
+      // =========================================================================
+      const activeMeridians = new Set(MERIDIANS_META.map((m) => m.id));
+      let symmetryMode = "both";
+      let showMeridians = true;
+      let showPoints = true;
+      let showLabels = false; // Mặc định ẩn tên huyệt khi vừa vào cho nhẹ & sạch
+      let searchQuery = "";
+      let selectedNodeIdx = null;
+      let hoveredNodeIdx = null;
+
+      const labelsLayer = document.getElementById("labels-layer");
+      const labelElements = NODES_3D.map((n) => {
+        const div = document.createElement("div");
+        div.className = "point-label hidden";
+        div.textContent = `${n.pt.code} ${n.pt.name}`;
+        div.style.borderColor = MERIDIAN_LOOKUP[n.pt.m].color;
+        labelsLayer.appendChild(div);
+        return div;
+      });
+
+      function isNodeVisible(node) {
+        if (!showPoints) return false;
+        if (!activeMeridians.has(node.pt.m)) return false;
+        if (symmetryMode === "single" && node.side === "R") return false;
+        if (searchQuery) {
+          const q = searchQuery;
+          const p = node.pt;
+          const mName = MERIDIAN_LOOKUP[p.m].name.toLowerCase();
+          const match =
+            p.code.toLowerCase().includes(q) ||
+            p.name.toLowerCase().includes(q) ||
+            mName.includes(q) ||
+            p.ben.toLowerCase().includes(q) ||
+            p.loc.toLowerCase().includes(q);
+          if (!match) return false;
+        }
+        return true;
+      }
+
+      function updateVisibilityState() {
+        meridianTubes.forEach((t) => {
+          const vis =
+            showMeridians &&
+            activeMeridians.has(t.meridianId) &&
+            !(symmetryMode === "single" && t.side === "R");
+          t.mesh.visible = vis;
+        });
+
+        const hiddenMat = new THREE.Matrix4().makeScale(0, 0, 0);
+        NODES_3D.forEach((n, idx) => {
+          if (isNodeVisible(n)) {
+            dummyMat.setPosition(n.pos);
+            instancedNodes.setMatrixAt(idx, dummyMat);
+          } else {
+            instancedNodes.setMatrixAt(idx, hiddenMat);
+          }
+        });
+        instancedNodes.instanceMatrix.needsUpdate = true;
+        renderAcupointList();
+      }
+
+      // =========================================================================
+      // 9. GIAO DIỆN BÊN TRÁI & PHẢI
+      // =========================================================================
+      const meridianFilterList = document.getElementById("meridian-filter-list");
+
+      function renderMeridianFilters() {
+        meridianFilterList.innerHTML = "";
+        MERIDIANS_META.forEach((meta) => {
+          const count = ACUPOINTS_DB.filter((p) => p.m === meta.id).length;
+          const checked = activeMeridians.has(meta.id);
+
+          const row = document.createElement("label");
+          row.className =
+            "flex cursor-pointer items-center justify-between rounded-xl bg-slate-900/65 hover:bg-slate-800/80 border border-slate-800/90 px-2.5 py-1.5 text-xs transition";
+          row.innerHTML = `
+            <div class="flex items-center gap-2 min-w-0">
+              <input type="checkbox" data-mid="${meta.id}" ${checked ? "checked" : ""} class="meridian-chk accent-cyan-400 h-3.5 w-3.5 shrink-0" />
+              <span class="h-2.5 w-2.5 rounded-full shrink-0" style="background:${meta.color}"></span>
+              <span class="truncate text-slate-200 font-medium" title="${meta.name}">${meta.short}</span>
+            </div>
+            <span class="ml-2 rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400">${count}</span>
+          `;
+          row.querySelector("input").addEventListener("change", (e) => {
+            if (e.target.checked) activeMeridians.add(meta.id);
+            else activeMeridians.delete(meta.id);
+            updateVisibilityState();
+          });
+          meridianFilterList.appendChild(row);
+        });
+      }
+
+      document.getElementById("btn-meridian-all").addEventListener("click", () => {
+        MERIDIANS_META.forEach((m) => activeMeridians.add(m.id));
+        renderMeridianFilters();
+        updateVisibilityState();
+      });
+
+      document.getElementById("btn-meridian-none").addEventListener("click", () => {
+        activeMeridians.clear();
+        renderMeridianFilters();
+        updateVisibilityState();
+      });
+
+      const btnSymBoth = document.getElementById("btn-sym-both");
+      const btnSymSingle = document.getElementById("btn-sym-single");
+
+      btnSymBoth.addEventListener("click", () => {
+        symmetryMode = "both";
+        btnSymBoth.className = "rounded-md bg-cyan-500 px-2 py-1 text-[11px] font-semibold text-slate-950 transition";
+        btnSymSingle.className = "rounded-md px-2 py-1 text-[11px] font-medium text-slate-400 hover:text-white transition";
+        updateVisibilityState();
+      });
+
+      btnSymSingle.addEventListener("click", () => {
+        symmetryMode = "single";
+        btnSymSingle.className = "rounded-md bg-cyan-500 px-2 py-1 text-[11px] font-semibold text-slate-950 transition";
+        btnSymBoth.className = "rounded-md px-2 py-1 text-[11px] font-medium text-slate-400 hover:text-white transition";
+        updateVisibilityState();
+      });
+
+      document.getElementById("chk-meridians").addEventListener("change", (e) => {
+        showMeridians = e.target.checked;
+        updateVisibilityState();
+      });
+
+      document.getElementById("chk-labels").addEventListener("change", (e) => {
+        showLabels = e.target.checked;
+      });
+
+      document.getElementById("chk-autorotate").addEventListener("change", (e) => {
+        controls.autoRotate = e.target.checked;
+        controls.autoRotateSpeed = 1.2;
+      });
+
+      const sliderOpacity = document.getElementById("slider-opacity");
+      const opacityVal = document.getElementById("opacity-val");
+      sliderOpacity.addEventListener("input", (e) => {
+        const val = parseFloat(e.target.value);
+        fresnelBodyMaterial.uniforms.uOpacity.value = val;
+        opacityVal.textContent = `${Math.round(val * 100)}%`;
+      });
+
+      // Nút ẩn/hiện nhanh huyệt & kinh mạch trên header
+      const btnTogglePts = document.getElementById("btn-toggle-pts");
+      btnTogglePts.addEventListener("click", () => {
+        showPoints = !showPoints;
+        btnTogglePts.style.opacity = showPoints ? "1" : "0.5";
+        updateVisibilityState();
+      });
+
+      const btnToggleMer = document.getElementById("btn-toggle-mer");
+      btnToggleMer.addEventListener("click", () => {
+        showMeridians = !showMeridians;
+        document.getElementById("chk-meridians").checked = showMeridians;
+        btnToggleMer.style.opacity = showMeridians ? "1" : "0.5";
+        updateVisibilityState();
+      });
+
+      // Nút reset góc nhìn
+      document.getElementById("btn-reset-cam").addEventListener("click", () => {
+        flyCameraTo(new THREE.Vector3(0, 0.25, 4.95), new THREE.Vector3(0, 0.1, 0));
+      });
+
+      const acupointListEl = document.getElementById("acupoint-list");
+      const filteredCountEl = document.getElementById("filtered-count");
+
+      function getFilteredUniqueAcupoints() {
+        return ACUPOINTS_DB.map((pt, dbIdx) => ({ pt, dbIdx })).filter(({ pt }) => {
+          if (!activeMeridians.has(pt.m)) return false;
+          if (!searchQuery) return true;
+          const mName = MERIDIAN_LOOKUP[pt.m].name.toLowerCase();
+          return (
+            pt.code.toLowerCase().includes(searchQuery) ||
+            pt.name.toLowerCase().includes(searchQuery) ||
+            mName.includes(searchQuery) ||
+            pt.ben.toLowerCase().includes(searchQuery) ||
+            pt.loc.toLowerCase().includes(searchQuery)
+          );
+        });
+      }
+
+      function renderAcupointList() {
+        const list = getFilteredUniqueAcupoints();
+        filteredCountEl.textContent = `${list.length} huyệt`;
+        acupointListEl.innerHTML = "";
+
+        if (list.length === 0) {
+          acupointListEl.innerHTML = `<div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-center text-xs text-slate-400">Không tìm thấy huyệt vị phù hợp.</div>`;
+          return;
+        }
+
+        const selectedDbIdx = selectedNodeIdx !== null ? NODES_3D[selectedNodeIdx].dbIdx : -1;
+
+        list.forEach(({ pt, dbIdx }) => {
+          const meta = MERIDIAN_LOOKUP[pt.m];
+          const isSel = dbIdx === selectedDbIdx;
+
+          const btn = document.createElement("button");
+          btn.className = `w-full text-left rounded-xl p-2.5 transition border ${
+            isSel
+              ? "bg-cyan-500/20 border-cyan-400/70 shadow"
+              : "bg-slate-900/65 hover:bg-slate-800/85 border-slate-800/90"
+          }`;
+          btn.innerHTML = `
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="h-2.5 w-2.5 rounded-full shrink-0" style="background:${meta.color}"></span>
+                <span class="truncate text-xs font-bold text-white">${pt.name}</span>
+                <span class="text-[11px] text-slate-400 shrink-0">${pt.hanzi || ""}</span>
+              </div>
+              <span class="shrink-0 rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-300">${pt.code}</span>
+            </div>
+            <div class="mt-0.5 truncate text-[11px] text-slate-400">${meta.name}</div>
+          `;
+          btn.addEventListener("click", () => {
+            const targetIdx = NODES_3D.findIndex((n) => n.dbIdx === dbIdx);
+            if (targetIdx !== -1) selectNode(targetIdx, true);
+          });
+          acupointListEl.appendChild(btn);
+        });
+      }
+
+      const searchInput = document.getElementById("search-input");
+      const btnClearSearch = document.getElementById("btn-clear-search");
+      searchInput.addEventListener("input", (e) => {
+        searchQuery = e.target.value.trim().toLowerCase();
+        btnClearSearch.classList.toggle("hidden", !searchQuery);
+        updateVisibilityState();
+      });
+      btnClearSearch.addEventListener("click", () => {
+        searchQuery = "";
+        searchInput.value = "";
+        btnClearSearch.classList.add("hidden");
+        updateVisibilityState();
+      });
+
+      // =========================================================================
+      // 10. CHỌN HUYỆT, HỒ SƠ Y KHOA & CAMERA FLY-TO
+      // =========================================================================
+      let isCamAnimating = false;
+      const camGoalPos = new THREE.Vector3();
+      const camGoalTarget = new THREE.Vector3();
+
+      function flyCameraTo(pos, target) {
+        camGoalPos.copy(pos);
+        camGoalTarget.copy(target);
+        isCamAnimating = true;
+      }
+
+      controls.addEventListener("start", () => {
+        isCamAnimating = false;
+      });
+
+      function focusCameraOnNode(node) {
+        const p = node.pos.clone();
+        const dir = new THREE.Vector3(p.x * 1.1, 0.08, p.z >= -0.03 ? 0.95 : -0.95);
+        if (node.pt.code === "GV20" || node.pt.code === "EX-HN1" || node.pt.code === "GV23") {
+          dir.set(0, 0.88, 0.48);
+        } else if (node.pt.code === "KI1") {
+          dir.set(p.x * 0.6, -0.55, 0.78);
+        } else if (node.pt.code === "CV1") {
+          dir.set(0, -0.45, 0.88);
+        }
+        dir.normalize();
+        flyCameraTo(p.clone().addScaledVector(dir, 1.55), p);
+      }
+
+      const detailCard = document.getElementById("detail-card");
+      const detailCode = document.getElementById("detail-code");
+      const detailSpecial = document.getElementById("detail-special");
+      const detailName = document.getElementById("detail-name");
+      const detailHanzi = document.getElementById("detail-hanzi");
+      const detailMeridian = document.getElementById("detail-meridian");
+
+      const medLocation = document.getElementById("med-location");
+      const medMuscles = document.getElementById("med-muscles");
+      const medNerves = document.getElementById("med-nerves");
+      const medVessels = document.getElementById("med-vessels");
+      const medTcmAction = document.getElementById("med-tcm-action");
+      const medIndications = document.getElementById("med-indications");
+      const medMechanism = document.getElementById("med-mechanism");
+      const medAcupressure = document.getElementById("med-acupressure");
+      const medNeedling = document.getElementById("med-needling");
+      const medCombos = document.getElementById("med-combos");
+      const medCaution = document.getElementById("med-caution");
+
+      const dossierTabs = document.querySelectorAll(".dossier-tab");
+      const dossierPanels = document.querySelectorAll(".dossier-panel");
+
+      function switchDossierTab(tabName) {
+        dossierTabs.forEach((btn) => {
+          const active = btn.dataset.tab === tabName;
+          btn.className = active
+            ? "dossier-tab rounded-md bg-cyan-500 text-slate-950 py-1 transition"
+            : "dossier-tab rounded-md text-slate-400 hover:text-white py-1 transition";
+        });
+        dossierPanels.forEach((panel) => {
+          panel.classList.toggle("hidden", panel.id !== `tab-panel-${tabName}`);
+        });
+      }
+
+      dossierTabs.forEach((btn) => {
+        btn.addEventListener("click", () => switchDossierTab(btn.dataset.tab));
+      });
+
+      function selectNode(nodeIdx, shouldFly = true) {
+        selectedNodeIdx = nodeIdx;
+        const node = NODES_3D[nodeIdx];
+        const pt = node.pt;
+        const meta = MERIDIAN_LOOKUP[pt.m];
+        const med = buildFullMedicalProfile(pt);
+
+        detailCode.textContent = `${pt.code} (${node.sideLabel})`;
+        detailSpecial.textContent = pt.tag;
+        detailName.textContent = pt.name;
+        detailHanzi.textContent = pt.hanzi || "";
+        detailMeridian.textContent = meta.name;
+        detailMeridian.style.color = meta.color;
+
+        medLocation.textContent = pt.loc;
+        medMuscles.textContent = med.muscles;
+        medNerves.textContent = med.nerves;
+        medVessels.textContent = med.vessels;
+
+        medTcmAction.textContent = med.tcmAction;
+        medIndications.textContent = med.indications;
+        medMechanism.textContent = med.mechanism;
+
+        medAcupressure.textContent = med.acupressure;
+        medNeedling.textContent = med.needling;
+        medCaution.textContent = med.caution;
+
+        medCombos.innerHTML = "";
+        med.combos.forEach((cb) => {
+          const targetPt = ACUPOINTS_DB.find((p) => p.code === cb.code);
+          if (!targetPt) return;
+          const itemBtn = document.createElement("button");
+          itemBtn.className =
+            "w-full text-left rounded-lg bg-slate-900 hover:bg-slate-800 border border-purple-400/35 px-2.5 py-1.5 transition flex items-start justify-between gap-2";
+          itemBtn.innerHTML = `
+            <div>
+              <span class="font-bold text-purple-300">${targetPt.code} - ${targetPt.name} (${targetPt.hanzi || ""})</span>
+              <p class="text-[11px] text-slate-300 mt-0.5">${cb.note}</p>
+            </div>
+            <span class="text-[10px] text-cyan-400 shrink-0 mt-0.5">Xem →</span>
+          `;
+          itemBtn.addEventListener("click", () => {
+            if (!activeMeridians.has(targetPt.m)) {
+              activeMeridians.add(targetPt.m);
+              renderMeridianFilters();
+              updateVisibilityState();
+            }
+            const jumpIdx = NODES_3D.findIndex((n) => n.pt.code === targetPt.code);
+            if (jumpIdx !== -1) selectNode(jumpIdx, true);
+          });
+          medCombos.appendChild(itemBtn);
+        });
+
+        if (window.innerWidth < 1024) {
+          const rp = document.getElementById("right-panel");
+          document.getElementById("left-panel").classList.add("hidden");
+          rp.classList.remove("hidden");
+          rp.classList.add("flex");
+        }
+
+        detailCard.classList.remove("hidden");
+        detailCard.classList.add("flex");
+
+        selRing.position.copy(node.pos);
+        selRingOuter.position.copy(node.pos);
+        selRing.visible = true;
+        selRingOuter.visible = true;
+
+        if (shouldFly) focusCameraOnNode(node);
+        renderAcupointList();
+      }
+
+      document.getElementById("btn-close-detail").addEventListener("click", () => {
+        selectedNodeIdx = null;
+        detailCard.classList.add("hidden");
+        detailCard.classList.remove("flex");
+        selRing.visible = false;
+        selRingOuter.visible = false;
+        renderAcupointList();
+      });
+
+      document.getElementById("btn-refocus-pt").addEventListener("click", () => {
+        if (selectedNodeIdx !== null) focusCameraOnNode(NODES_3D[selectedNodeIdx]);
+      });
+
+      document.getElementById("btn-prev-pt").addEventListener("click", () => {
+        const list = getFilteredUniqueAcupoints();
+        if (!list.length) return;
+        const curDb = selectedNodeIdx !== null ? NODES_3D[selectedNodeIdx].dbIdx : -1;
+        const posInList = list.findIndex((item) => item.dbIdx === curDb);
+        const prevDb = list[(posInList - 1 + list.length) % list.length].dbIdx;
+        const idx = NODES_3D.findIndex((n) => n.dbIdx === prevDb);
+        if (idx !== -1) selectNode(idx, true);
+      });
+
+      document.getElementById("btn-next-pt").addEventListener("click", () => {
+        const list = getFilteredUniqueAcupoints();
+        if (!list.length) return;
+        const curDb = selectedNodeIdx !== null ? NODES_3D[selectedNodeIdx].dbIdx : -1;
+        const posInList = list.findIndex((item) => item.dbIdx === curDb);
+        const nextDb = list[(posInList + 1) % list.length].dbIdx;
+        const idx = NODES_3D.findIndex((n) => n.dbIdx === nextDb);
+        if (idx !== -1) selectNode(idx, true);
+      });
+
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+      let downPos = { x: 0, y: 0 };
+
+      const hoverTooltip = document.getElementById("hover-tooltip");
+      const tooltipDot = document.getElementById("tooltip-dot");
+      const tooltipCode = document.getElementById("tooltip-code");
+      const tooltipName = document.getElementById("tooltip-name");
+      const tooltipSide = document.getElementById("tooltip-side");
+      const tooltipMeridian = document.getElementById("tooltip-meridian");
+
+      renderer.domElement.addEventListener("pointermove", (e) => {
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+
+        const hits = raycaster.intersectObject(instancedNodes);
+        const validHit = hits.find((h) => isNodeVisible(NODES_3D[h.instanceId]));
+
+        if (validHit) {
+          hoveredNodeIdx = validHit.instanceId;
+          const node = NODES_3D[hoveredNodeIdx];
+          const meta = MERIDIAN_LOOKUP[node.pt.m];
+
+          renderer.domElement.style.cursor = "pointer";
+          tooltipDot.style.backgroundColor = meta.color;
+          tooltipCode.textContent = node.pt.code;
+          tooltipName.textContent = node.pt.name;
+          tooltipSide.textContent = node.sideLabel;
+          tooltipMeridian.textContent = meta.name;
+
+          hoverTooltip.style.left = `${Math.min(e.clientX + 14, window.innerWidth - 230)}px`;
+          hoverTooltip.style.top = `${Math.max(e.clientY - 12, 12)}px`;
+          hoverTooltip.classList.remove("hidden");
+        } else {
+          hoveredNodeIdx = null;
+          renderer.domElement.style.cursor = "grab";
+          hoverTooltip.classList.add("hidden");
+        }
+      });
+
+      renderer.domElement.addEventListener("pointerdown", (e) => {
+        downPos = { x: e.clientX, y: e.clientY };
+      });
+
+      renderer.domElement.addEventListener("pointerup", (e) => {
+        if (Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) > 6) return;
+        if (hoveredNodeIdx !== null) {
+          selectNode(hoveredNodeIdx, true);
+        }
+      });
+
+      const CAM_PRESETS = {
+        front: { pos: new THREE.Vector3(0, 0.25, 4.95), target: new THREE.Vector3(0, 0.1, 0) },
+        back:  { pos: new THREE.Vector3(0, 0.25, -4.95), target: new THREE.Vector3(0, 0.1, 0) },
+        head:  { pos: new THREE.Vector3(0, 1.52, 1.35), target: new THREE.Vector3(0, 1.50, 0) },
+        torso: { pos: new THREE.Vector3(0, 0.65, 2.25), target: new THREE.Vector3(0, 0.62, 0) },
+        arms:  { pos: new THREE.Vector3(1.55, 0.45, 1.85), target: new THREE.Vector3(0.45, 0.40, 0) },
+        legs:  { pos: new THREE.Vector3(0, -1.05, 2.45), target: new THREE.Vector3(0, -1.05, 0) }
+      };
+
+      document.querySelectorAll(".cam-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const p = CAM_PRESETS[btn.dataset.view];
+          if (p) flyCameraTo(p.pos, p.target);
+        });
+      });
+
+      const btnMobileLeft = document.getElementById("btn-mobile-left");
+      if (btnMobileLeft) {
+        btnMobileLeft.addEventListener("click", () => {
+          const lp = document.getElementById("left-panel");
+          const rp = document.getElementById("right-panel");
+          if (rp) rp.classList.add("hidden");
+          if (lp) {
+            lp.classList.toggle("hidden");
+            lp.classList.toggle("flex");
+          }
+        });
+      }
+
+      const btnMobileRight = document.getElementById("btn-mobile-right");
+      if (btnMobileRight) {
+        btnMobileRight.addEventListener("click", () => {
+          const rp = document.getElementById("right-panel");
+          const lp = document.getElementById("left-panel");
+          if (lp) lp.classList.add("hidden");
+          if (rp) {
+            rp.classList.toggle("hidden");
+            rp.classList.toggle("flex");
+          }
+        });
+      }
+
+      renderMeridianFilters();
+      renderAcupointList();
+      updateVisibilityState();
+
+      // =========================================================================
+      // 11. ANIMATION LOOP & RESIZE
+      // =========================================================================
+      const vectorTemp = new THREE.Vector3();
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        if (isCamAnimating) {
+          camera.position.lerp(camGoalPos, 0.08);
+          controls.target.lerp(camGoalTarget, 0.08);
+          if (camera.position.distanceTo(camGoalPos) < 0.01) {
+            isCamAnimating = false;
+          }
+        }
+
+        controls.update();
+
+        // Hiệu ứng nhịp thở / xung động nhẹ cho hào quang huyệt đang chọn
+        if (selRing.visible) {
+          const s = 1.0 + Math.sin(Date.now() * 0.005) * 0.12;
+          selRing.scale.set(s, s, s);
+        }
+
+        // Cập nhật vị trí nhãn 2D trên màn hình
+        if (showLabels) {
+          NODES_3D.forEach((n, idx) => {
+            const lbl = labelElements[idx];
+            if (!isNodeVisible(n)) {
+              lbl.classList.add("hidden");
+              return;
+            }
+            vectorTemp.copy(n.pos);
+            vectorTemp.project(camera);
+
+            // Chỉ hiển thị nhãn khi điểm huyệt ở trước camera và nằm trong tầm nhìn
+            if (vectorTemp.z < 1.0 && Math.abs(vectorTemp.x) <= 1.0 && Math.abs(vectorTemp.y) <= 1.0) {
+              const x = (vectorTemp.x * 0.5 + 0.5) * window.innerWidth;
+              const y = (-(vectorTemp.y * 0.5) + 0.5) * window.innerHeight;
+              lbl.style.left = `${x}px`;
+              lbl.style.top = `${y}px`;
+              lbl.classList.remove("hidden");
+            } else {
+              lbl.classList.add("hidden");
+            }
+          });
+        } else {
+          labelElements.forEach((l) => l.classList.add("hidden"));
+        }
+
+        renderer.render(scene, camera);
+      }
+
+      animate();
+
+      window.addEventListener("resize", () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    };
+  </script>
+</body>
+</html>
