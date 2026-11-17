@@ -1,0 +1,20 @@
+{
+  "name": "Huyệt Đạo 3D",
+  "short_name": "Huyệt Đạo",
+  "description": "Bản đồ huyệt đạo 3D toàn diện - 14 kinh mạch & kỳ huyệt",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#050a14",
+  "theme_color": "#050a14",
+  "orientation": "portrait",
+  "lang": "vi",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
