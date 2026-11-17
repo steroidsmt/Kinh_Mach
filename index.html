@@ -85,6 +85,41 @@
     input[type="range"] {
       accent-color: #22d3ee;
     }
+    #canvas-container canvas {
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+      display: block;
+    }
+    button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    input[type="text"] { user-select: text; -webkit-user-select: text; }
+
+    /* ===== Responsive: dưới 1024px, 2 panel trở thành bottom-sheet để vẫn thấy mô hình 3D phía trên ===== */
+    .sheet {
+      left: 0.5rem;
+      right: 0.5rem;
+      bottom: calc(3.6rem + env(safe-area-inset-bottom, 0px));
+      height: 50vh;
+      height: 50dvh;
+      max-height: calc(100vh - 8rem);
+      overscroll-behavior: contain;
+    }
+    #left-panel { overflow-y: auto; }
+    #footer-bar { padding-bottom: env(safe-area-inset-bottom, 0px); }
+    .nav-btn-active { background: rgba(6, 182, 212, 0.28) !important; border-color: rgba(34, 211, 238, 0.7) !important; }
+    /* Điện thoại xoay ngang / màn hình thấp: sheet thành ngăn kéo bên cạnh */
+    @media (max-width: 1023px) and (max-height: 520px) {
+      #left-panel { right: auto; left: 0.5rem; }
+      #right-panel { left: auto; right: 0.5rem; }
+      .sheet { width: min(420px, 55vw); top: 3.4rem; height: auto; max-height: none; bottom: calc(3.2rem + env(safe-area-inset-bottom, 0px)); }
+    }
+    @media (min-width: 1024px) and (max-width: 1279px) {
+      .sheet { bottom: 5.25rem !important; }
+    }
+    @media (min-width: 1024px) {
+      .sheet { height: auto; max-height: none; bottom: 3.5rem; }
+      #left-panel { overflow-y: visible; left: 0.75rem; right: auto; top: 5rem; width: 330px; }
+      #right-panel { right: 0.75rem; left: auto; top: 5rem; width: 420px; }
+    }
   </style>
 </head>
 <body>
@@ -109,45 +144,41 @@
   </div>
 
   <!-- Top Navigation Header -->
-  <header class="pointer-events-none fixed top-0 left-0 right-0 z-30 flex items-center justify-between gap-2 p-3 sm:px-4 sm:py-3">
-    <div class="pointer-events-auto glass-panel flex items-center gap-3 rounded-2xl px-3.5 py-2">
-      <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-300">
+  <header class="pointer-events-none fixed top-0 left-0 right-0 z-30 flex items-center justify-between gap-2 p-2 sm:px-4 sm:py-3">
+    <div class="pointer-events-auto glass-panel flex min-w-0 items-center gap-2 rounded-2xl px-2.5 py-1.5 sm:gap-3 sm:px-3.5 sm:py-2">
+      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-300 sm:h-9 sm:w-9">
         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <circle cx="12" cy="4.5" r="2" />
           <path d="M12 7v8.5M7.5 10h9M9.5 21l2.5-5.5 2.5 5.5" stroke-linecap="round" stroke-linejoin="round" />
           <circle cx="12" cy="11" r="1.2" fill="currentColor" />
         </svg>
       </div>
-      <div>
+      <div class="min-w-0">
         <div class="flex items-center gap-2">
-          <h1 class="text-sm sm:text-base font-bold tracking-tight text-white">
-            Bản Đồ Huyệt Đạo 3D Toàn Diện
+          <h1 class="truncate text-[13px] sm:text-base font-bold tracking-tight text-white">
+            <span class="lg:hidden">Huyệt Đạo 3D</span><span class="hidden lg:inline">Bản Đồ Huyệt Đạo 3D Toàn Diện</span>
           </h1>
-          <span id="total-nodes-badge" class="hidden sm:inline-block rounded-full bg-cyan-500/20 border border-cyan-400/40 px-2 py-0.5 text-[10px] font-semibold text-cyan-300">
+          <span id="total-nodes-badge" class="hidden lg:inline-block rounded-full bg-cyan-500/20 border border-cyan-400/40 px-2 py-0.5 text-[10px] font-semibold text-cyan-300">
             135 Huyệt • 246 Điểm
           </span>
         </div>
-        <p class="text-[11px] text-slate-400">14 Kinh Mạch Chính &amp; Kỳ Huyệt Đông Y</p>
+        <p class="hidden sm:block text-[11px] text-slate-400">14 Kinh Mạch Chính &amp; Kỳ Huyệt Đông Y</p>
       </div>
     </div>
 
     <!-- Quick Action Controls & Mobile Toggles -->
-    <div class="flex items-center gap-2 pointer-events-auto">
-      <button id="btn-toggle-pts" class="glass-panel hidden sm:flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20 transition">
-        <span>🔘 Ẩn/Hiện Huyệt</span>
+    <div class="flex shrink-0 items-center gap-1.5 sm:gap-2 pointer-events-auto">
+      <button id="btn-reset-cam" aria-label="Reset góc nhìn" class="glass-panel flex h-9 items-center justify-center gap-1.5 rounded-xl px-2.5 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20 transition whitespace-nowrap sm:px-3" title="Reset góc nhìn toàn thân trước">
+        <span>🏠</span><span class="hidden min-[480px]:inline">Reset Góc Nhìn</span>
       </button>
-      <button id="btn-toggle-mer" class="glass-panel hidden sm:flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20 transition">
-        <span>〰️ Ẩn/Hiện Kinh Mạch</span>
-      </button>
-      <button id="btn-reset-cam" class="glass-panel flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20 transition" title="Reset góc nhìn toàn thân trước">
-        <span>🏠 Reset Góc Nhìn</span>
-      </button>
-      <div class="flex items-center gap-2 sm:hidden">
-        <button id="btn-mobile-left" class="glass-panel flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-cyan-300">
-          <span>Kinh Mạch</span>
+      <div class="flex items-center gap-1.5 lg:hidden">
+        <button id="btn-mobile-left" aria-label="Kinh mạch" class="glass-panel flex h-9 items-center justify-center gap-1.5 rounded-xl px-2.5 text-xs font-semibold text-cyan-300 whitespace-nowrap transition">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h10M4 18h16" /></svg>
+          <span class="hidden min-[480px]:inline">Kinh Mạch</span>
         </button>
-        <button id="btn-mobile-right" class="glass-panel flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-cyan-300">
-          <span>Tra cứu</span>
+        <button id="btn-mobile-right" aria-label="Tra cứu" class="glass-panel flex h-9 items-center justify-center gap-1.5 rounded-xl px-2.5 text-xs font-semibold text-cyan-300 whitespace-nowrap transition">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" /></svg>
+          <span class="hidden min-[480px]:inline">Tra cứu</span>
         </button>
       </div>
     </div>
@@ -156,9 +187,9 @@
   <!-- LEFT PANEL: 15 Meridian Filters & Anatomical Controls -->
   <aside
     id="left-panel"
-    class="glass-panel fixed top-16 sm:top-20 bottom-14 left-3 z-20 hidden w-[310px] sm:w-[330px] flex-col rounded-2xl p-3 lg:flex"
+    class="sheet glass-panel fixed z-20 hidden flex-col rounded-2xl p-3 lg:flex"
   >
-    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+    <div class="order-2 lg:order-1 shrink-0 flex items-center justify-between border-b border-slate-800 pb-2">
       <h2 class="text-xs font-bold uppercase tracking-wider text-cyan-300">Hệ thống Kinh Mạch</h2>
       <div class="flex gap-1">
         <button id="btn-meridian-all" class="rounded bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-200">Chọn hết</button>
@@ -167,12 +198,12 @@
     </div>
 
     <!-- Meridian List -->
-    <div id="meridian-filter-list" class="mt-2 flex-1 space-y-1 overflow-y-auto pr-1">
+    <div id="meridian-filter-list" class="order-3 lg:order-2 mt-2 shrink-0 space-y-1 pr-1 lg:min-h-0 lg:shrink lg:flex-1 lg:overflow-y-auto">
       <!-- Populated dynamically -->
     </div>
 
     <!-- Anatomical Display Settings -->
-    <div class="mt-2.5 border-t border-slate-800 pt-2.5 shrink-0 space-y-2">
+    <div class="order-1 lg:order-3 mb-2.5 border-b border-slate-800 pb-2.5 lg:mb-0 lg:border-b-0 lg:mt-2.5 lg:border-t lg:pb-0 lg:pt-2.5 shrink-0 space-y-2">
       <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Hiển thị giải phẫu</div>
       <div class="flex items-center justify-between text-xs">
         <span class="text-slate-300">Đối xứng cơ thể</span>
@@ -180,6 +211,13 @@
           <button id="btn-sym-both" class="rounded-md bg-cyan-500 px-2 py-1 text-[11px] font-semibold text-slate-950 transition">2 Bên</button>
           <button id="btn-sym-single" class="rounded-md px-2 py-1 text-[11px] font-medium text-slate-400 hover:text-white transition">1 Bên</button>
         </div>
+      </div>
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-slate-300">Điểm huyệt</span>
+        <label class="relative inline-flex cursor-pointer items-center">
+          <input id="chk-points" type="checkbox" checked class="peer sr-only" />
+          <div class="h-5 w-9 rounded-full bg-slate-800 peer-checked:bg-cyan-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all"></div>
+        </label>
       </div>
       <div class="flex items-center justify-between text-xs">
         <span class="text-slate-300">Đường kinh lạc</span>
@@ -215,7 +253,7 @@
   <!-- RIGHT PANEL: Smart Search, Acupoint List & Medical Dossier -->
   <aside
     id="right-panel"
-    class="glass-panel fixed top-16 sm:top-20 bottom-14 right-3 z-20 hidden w-[340px] sm:w-[420px] flex-col rounded-2xl p-3 lg:flex"
+    class="sheet glass-panel fixed z-20 hidden flex-col rounded-2xl p-3 lg:flex"
   >
     <!-- Search Bar -->
     <div class="relative shrink-0">
@@ -225,14 +263,14 @@
       <input
         id="search-input"
         type="text"
-        placeholder="Tìm tên, Hán tự, mã (ST36), thần kinh, triệu chứng..."
-        class="w-full rounded-xl bg-slate-950/90 border border-slate-700/90 pl-9 pr-8 py-2 text-xs text-white placeholder-slate-400 focus:border-cyan-400 focus:outline-none"
+        placeholder="Tìm tên, Hán tự, mã, triệu chứng..." autocomplete="off"
+        class="w-full rounded-xl bg-slate-950/90 border border-slate-700/90 pl-9 pr-8 py-2 text-base lg:text-xs text-white placeholder-slate-400 focus:border-cyan-400 focus:outline-none"
       />
       <button id="btn-clear-search" class="hidden absolute right-2.5 top-2 text-xs text-slate-400 hover:text-white">✕</button>
     </div>
 
     <!-- MEDICAL ACUPOINT DOSSIER CARD (Hồ sơ Y khoa chuyên sâu) -->
-    <div id="detail-card" class="mt-2.5 hidden flex-col rounded-xl bg-slate-900/95 border border-cyan-500/50 p-3 glow-cyan max-h-[68%] shrink-0">
+    <div id="detail-card" class="mt-2.5 hidden flex-col rounded-xl bg-slate-900/95 border border-cyan-500/50 p-3 glow-cyan max-h-[72%] min-h-0 shrink-0">
       <!-- Dossier Header -->
       <div class="flex items-start justify-between gap-2 shrink-0">
         <div class="min-w-0">
@@ -348,30 +386,30 @@
     </div>
 
     <!-- Filtered Acupoints List -->
-    <div id="acupoint-list" class="mt-1.5 flex-1 space-y-1.5 overflow-y-auto pr-1">
+    <div id="acupoint-list" class="mt-1.5 min-h-[3rem] flex-1 space-y-1.5 overflow-y-auto pr-1">
       <!-- Populated dynamically -->
     </div>
   </aside>
 
   <!-- BOTTOM CAMERA PRESETS BAR -->
-  <footer class="pointer-events-none fixed bottom-2.5 left-0 right-0 z-30 flex justify-center px-2">
-    <div class="pointer-events-auto glass-panel flex flex-wrap items-center justify-center gap-1 rounded-2xl p-1.5">
-      <button data-view="front" class="cam-btn rounded-xl bg-slate-800/90 hover:bg-cyan-500/25 hover:text-cyan-300 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition">
+  <footer id="footer-bar" class="pointer-events-none fixed bottom-2.5 left-0 right-0 z-30 flex justify-center px-2">
+    <div class="pointer-events-auto glass-panel flex max-w-full items-center gap-1 overflow-x-auto rounded-2xl p-1.5 lg:flex-wrap lg:justify-center">
+      <button data-view="front" class="cam-btn shrink-0 whitespace-nowrap rounded-xl bg-slate-800/90 hover:bg-cyan-500/25 hover:text-cyan-300 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition">
         Toàn thân trước
       </button>
-      <button data-view="back" class="cam-btn rounded-xl bg-slate-800/90 hover:bg-cyan-500/25 hover:text-cyan-300 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition">
+      <button data-view="back" class="cam-btn shrink-0 whitespace-nowrap rounded-xl bg-slate-800/90 hover:bg-cyan-500/25 hover:text-cyan-300 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition">
         Toàn thân sau
       </button>
-      <button data-view="head" class="cam-btn rounded-xl bg-slate-800/90 hover:bg-cyan-500/25 hover:text-cyan-300 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition">
+      <button data-view="head" class="cam-btn shrink-0 whitespace-nowrap rounded-xl bg-slate-800/90 hover:bg-cyan-500/25 hover:text-cyan-300 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition">
         Đầu &amp; Mặt
       </button>
-      <button data-view="torso" class="cam-btn rounded-xl bg-slate-800/90 hover:bg-cyan-500/25 hover:text-cyan-300 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition">
+      <button data-view="torso" class="cam-btn shrink-0 whitespace-nowrap rounded-xl bg-slate-800/90 hover:bg-cyan-500/25 hover:text-cyan-300 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition">
         Thân mình
       </button>
-      <button data-view="arms" class="cam-btn rounded-xl bg-slate-800/90 hover:bg-cyan-500/25 hover:text-cyan-300 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition">
+      <button data-view="arms" class="cam-btn shrink-0 whitespace-nowrap rounded-xl bg-slate-800/90 hover:bg-cyan-500/25 hover:text-cyan-300 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition">
         Tay &amp; Bàn tay
       </button>
-      <button data-view="legs" class="cam-btn rounded-xl bg-slate-800/90 hover:bg-cyan-500/25 hover:text-cyan-300 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition">
+      <button data-view="legs" class="cam-btn shrink-0 whitespace-nowrap rounded-xl bg-slate-800/90 hover:bg-cyan-500/25 hover:text-cyan-300 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition">
         Chân &amp; Bàn chân
       </button>
     </div>
@@ -1061,7 +1099,7 @@
       // =========================================================================
       // 7. INSTANCED MESH CHO 246 ĐIỂM HUYỆT
       // =========================================================================
-      const nodeGeo = new THREE.SphereGeometry(0.022, 16, 16);
+      const nodeGeo = new THREE.SphereGeometry(0.0125, 12, 12);
       const nodeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
       const instancedNodes = new THREE.InstancedMesh(nodeGeo, nodeMat, NODES_3D.length);
       instancedNodes.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -1080,14 +1118,14 @@
       if (instancedNodes.instanceColor) instancedNodes.instanceColor.needsUpdate = true;
 
       const selRing = new THREE.Mesh(
-        new THREE.RingGeometry(0.032, 0.044, 32),
+        new THREE.RingGeometry(0.02, 0.028, 32),
         new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.95 })
       );
       selRing.visible = false;
       scene.add(selRing);
 
       const selRingOuter = new THREE.Mesh(
-        new THREE.RingGeometry(0.052, 0.058, 32),
+        new THREE.RingGeometry(0.034, 0.039, 32),
         new THREE.MeshBasicMaterial({ color: 0x22d3ee, side: THREE.DoubleSide, transparent: true, opacity: 0.65 })
       );
       selRingOuter.visible = false;
@@ -1153,6 +1191,10 @@
           }
         });
         instancedNodes.instanceMatrix.needsUpdate = true;
+        if (selectedNodeIdx !== null) {
+          selRing.visible = showPoints;
+          selRingOuter.visible = showPoints;
+        }
         renderAcupointList();
       }
 
@@ -1238,19 +1280,10 @@
         opacityVal.textContent = `${Math.round(val * 100)}%`;
       });
 
-      // Nút ẩn/hiện nhanh huyệt & kinh mạch trên header
-      const btnTogglePts = document.getElementById("btn-toggle-pts");
-      btnTogglePts.addEventListener("click", () => {
-        showPoints = !showPoints;
-        btnTogglePts.style.opacity = showPoints ? "1" : "0.5";
-        updateVisibilityState();
-      });
-
-      const btnToggleMer = document.getElementById("btn-toggle-mer");
-      btnToggleMer.addEventListener("click", () => {
-        showMeridians = !showMeridians;
-        document.getElementById("chk-meridians").checked = showMeridians;
-        btnToggleMer.style.opacity = showMeridians ? "1" : "0.5";
+      // Toggle hiển thị điểm huyệt (trong panel Kinh Mạch)
+      document.getElementById("chk-points").addEventListener("change", (e) => {
+        showPoints = e.target.checked;
+        if (!showPoints) hideTooltip();
         updateVisibilityState();
       });
 
@@ -1454,20 +1487,15 @@
           medCombos.appendChild(itemBtn);
         });
 
-        if (window.innerWidth < 1024) {
-          const rp = document.getElementById("right-panel");
-          document.getElementById("left-panel").classList.add("hidden");
-          rp.classList.remove("hidden");
-          rp.classList.add("flex");
-        }
+        if (!isDesktop()) setSheet("right");
 
         detailCard.classList.remove("hidden");
         detailCard.classList.add("flex");
 
         selRing.position.copy(node.pos);
         selRingOuter.position.copy(node.pos);
-        selRing.visible = true;
-        selRingOuter.visible = true;
+        selRing.visible = showPoints;
+        selRingOuter.visible = showPoints;
 
         if (shouldFly) focusCameraOnNode(node);
         renderAcupointList();
@@ -1506,57 +1534,144 @@
         if (idx !== -1) selectNode(idx, true);
       });
 
-      const raycaster = new THREE.Raycaster();
-      const mouse = new THREE.Vector2();
-      let downPos = { x: 0, y: 0 };
-
+      // ---- Tooltip + chọn huyệt: dùng khoảng cách trên màn hình (hoạt động tốt cho cả chuột & cảm ứng) ----
       const hoverTooltip = document.getElementById("hover-tooltip");
       const tooltipDot = document.getElementById("tooltip-dot");
       const tooltipCode = document.getElementById("tooltip-code");
       const tooltipName = document.getElementById("tooltip-name");
       const tooltipSide = document.getElementById("tooltip-side");
       const tooltipMeridian = document.getElementById("tooltip-meridian");
+      const pickVec = new THREE.Vector3();
 
-      renderer.domElement.addEventListener("pointermove", (e) => {
-        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-        raycaster.setFromCamera(mouse, camera);
-
-        const hits = raycaster.intersectObject(instancedNodes);
-        const validHit = hits.find((h) => isNodeVisible(NODES_3D[h.instanceId]));
-
-        if (validHit) {
-          hoveredNodeIdx = validHit.instanceId;
-          const node = NODES_3D[hoveredNodeIdx];
-          const meta = MERIDIAN_LOOKUP[node.pt.m];
-
-          renderer.domElement.style.cursor = "pointer";
-          tooltipDot.style.backgroundColor = meta.color;
-          tooltipCode.textContent = node.pt.code;
-          tooltipName.textContent = node.pt.name;
-          tooltipSide.textContent = node.sideLabel;
-          tooltipMeridian.textContent = meta.name;
-
-          hoverTooltip.style.left = `${Math.min(e.clientX + 14, window.innerWidth - 230)}px`;
-          hoverTooltip.style.top = `${Math.max(e.clientY - 12, 12)}px`;
-          hoverTooltip.classList.remove("hidden");
-        } else {
-          hoveredNodeIdx = null;
-          renderer.domElement.style.cursor = "grab";
-          hoverTooltip.classList.add("hidden");
+      function pickNodeAt(clientX, clientY, pointerType) {
+        const W = window.innerWidth;
+        const H = window.innerHeight;
+        const radius = pointerType === "mouse" ? 9 : 22; // ngón tay cần vùng chạm rộng hơn
+        const cands = [];
+        for (let i = 0; i < NODES_3D.length; i++) {
+          const n = NODES_3D[i];
+          if (!isNodeVisible(n)) continue;
+          pickVec.copy(n.pos).project(camera);
+          if (pickVec.z < -1 || pickVec.z > 1) continue;
+          const sx = (pickVec.x * 0.5 + 0.5) * W;
+          const sy = (-pickVec.y * 0.5 + 0.5) * H;
+          const d = Math.hypot(sx - clientX, sy - clientY);
+          if (d <= radius) cands.push({ idx: i, d, depth: pickVec.z });
         }
-      });
+        if (!cands.length) return null;
+        const minD = Math.min(...cands.map((c) => c.d));
+        // Trong các điểm gần nhau trên màn hình, ưu tiên điểm gần camera nhất (mặt trước)
+        const near = cands.filter((c) => c.d <= minD + 8).sort((x, y) => x.depth - y.depth);
+        return near[0].idx;
+      }
 
-      renderer.domElement.addEventListener("pointerdown", (e) => {
-        downPos = { x: e.clientX, y: e.clientY };
-      });
+      function hideTooltip() {
+        hoveredNodeIdx = null;
+        hoverTooltip.classList.add("hidden");
+        renderer.domElement.style.cursor = "grab";
+      }
 
-      renderer.domElement.addEventListener("pointerup", (e) => {
-        if (Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) > 6) return;
-        if (hoveredNodeIdx !== null) {
-          selectNode(hoveredNodeIdx, true);
+      let lastMouse = null; // vị trí chuột gần nhất trên canvas (null nếu chuột không ở trên canvas)
+
+      function updateHover(clientX, clientY) {
+        const idx = pickNodeAt(clientX, clientY, "mouse");
+        if (idx === null) {
+          hideTooltip();
+          return;
         }
+        hoveredNodeIdx = idx;
+        const node = NODES_3D[idx];
+        const meta = MERIDIAN_LOOKUP[node.pt.m];
+        renderer.domElement.style.cursor = "pointer";
+        tooltipDot.style.backgroundColor = meta.color;
+        tooltipCode.textContent = node.pt.code;
+        tooltipName.textContent = node.pt.name;
+        tooltipSide.textContent = node.sideLabel;
+        tooltipMeridian.textContent = meta.name;
+        hoverTooltip.style.left = `${Math.max(8, Math.min(clientX + 14, window.innerWidth - 240))}px`;
+        hoverTooltip.style.top = `${Math.max(clientY - 12, 12)}px`;
+        hoverTooltip.classList.remove("hidden");
+      }
+
+      const activePointers = new Set();
+      const gesture = { x: 0, y: 0, t: 0, multi: false };
+
+      // Dùng capture trên container để không bị OrbitControls chặn sự kiện
+      container.addEventListener(
+        "pointerdown",
+        (e) => {
+          activePointers.add(e.pointerId);
+          if (activePointers.size > 1) gesture.multi = true; // pinch/zoom nhiều ngón → không tính là "tap"
+          else {
+            gesture.multi = false;
+            gesture.x = e.clientX;
+            gesture.y = e.clientY;
+            gesture.t = performance.now();
+          }
+          hideTooltip();
+        },
+        true
+      );
+
+      container.addEventListener(
+        "pointermove",
+        (e) => {
+          if (e.pointerType !== "mouse") return; // cảm ứng không có hover
+          if (e.buttons) {
+            // đang kéo xoay mô hình
+            lastMouse = null;
+            hideTooltip();
+            return;
+          }
+          lastMouse = { x: e.clientX, y: e.clientY };
+          updateHover(e.clientX, e.clientY);
+        },
+        true
+      );
+
+      container.addEventListener(
+        "pointerup",
+        (e) => {
+          activePointers.delete(e.pointerId);
+          const wasMulti = gesture.multi;
+          if (activePointers.size === 0) gesture.multi = false;
+          if (wasMulti) return;
+
+          const moved = Math.hypot(e.clientX - gesture.x, e.clientY - gesture.y);
+          const held = performance.now() - gesture.t;
+          if (e.pointerType !== "mouse") hideTooltip();
+          if (moved > 10 || held > 800) return; // là thao tác kéo/giữ, không phải click/tap
+
+          const idx = pickNodeAt(e.clientX, e.clientY, e.pointerType);
+          if (idx !== null) {
+            hideTooltip();
+            selectNode(idx, true);
+          }
+        },
+        true
+      );
+
+      container.addEventListener(
+        "pointercancel",
+        (e) => {
+          activePointers.delete(e.pointerId);
+          if (activePointers.size === 0) gesture.multi = false;
+          lastMouse = null;
+          hideTooltip();
+        },
+        true
+      );
+
+      // Chuột rời khỏi canvas (sang panel/ra ngoài cửa sổ) → luôn ẩn tooltip
+      container.addEventListener("pointerleave", () => {
+        lastMouse = null;
+        hideTooltip();
       });
+      window.addEventListener("blur", () => {
+        lastMouse = null;
+        hideTooltip();
+      });
+      document.addEventListener("visibilitychange", hideTooltip);
 
       const CAM_PRESETS = {
         front: { pos: new THREE.Vector3(0, 0.25, 4.95), target: new THREE.Vector3(0, 0.1, 0) },
@@ -1574,31 +1689,53 @@
         });
       });
 
+      // ---- Bottom-sheet trên mobile/tablet (< 1024px) ----
+      const leftPanelEl = document.getElementById("left-panel");
+      const rightPanelEl = document.getElementById("right-panel");
       const btnMobileLeft = document.getElementById("btn-mobile-left");
-      if (btnMobileLeft) {
-        btnMobileLeft.addEventListener("click", () => {
-          const lp = document.getElementById("left-panel");
-          const rp = document.getElementById("right-panel");
-          if (rp) rp.classList.add("hidden");
-          if (lp) {
-            lp.classList.toggle("hidden");
-            lp.classList.toggle("flex");
-          }
-        });
+      const btnMobileRight = document.getElementById("btn-mobile-right");
+      let openSheetName = null; // "left" | "right" | null
+
+      function isDesktop() {
+        return window.innerWidth >= 1024;
       }
 
-      const btnMobileRight = document.getElementById("btn-mobile-right");
-      if (btnMobileRight) {
-        btnMobileRight.addEventListener("click", () => {
-          const rp = document.getElementById("right-panel");
-          const lp = document.getElementById("left-panel");
-          if (lp) lp.classList.add("hidden");
-          if (rp) {
-            rp.classList.toggle("hidden");
-            rp.classList.toggle("flex");
+      // Dịch tâm khung hình lên phía trên sheet để mô hình luôn nằm trong vùng nhìn thấy
+      function applyViewOffset() {
+        const W = window.innerWidth;
+        const H = window.innerHeight;
+        const panel = openSheetName === "left" ? leftPanelEl : openSheetName === "right" ? rightPanelEl : null;
+        if (!isDesktop() && panel) {
+          const r = panel.getBoundingClientRect();
+          if (r.width > W * 0.8) {
+            // bottom-sheet: dịch mô hình lên trên
+            camera.setViewOffset(W, H, 0, Math.max(0, H - r.top) / 2, W, H);
+          } else if (openSheetName === "right") {
+            // ngăn kéo bên phải (xoay ngang): dịch mô hình sang trái
+            camera.setViewOffset(W, H, Math.max(0, W - r.left) / 2, 0, W, H);
+          } else {
+            // ngăn kéo bên trái: dịch mô hình sang phải
+            camera.setViewOffset(W, H, -Math.max(0, r.right) / 2, 0, W, H);
           }
-        });
+        } else {
+          camera.clearViewOffset();
+        }
+        camera.updateProjectionMatrix();
       }
+
+      function setSheet(name) {
+        openSheetName = name; // null = đóng hết
+        [["left", leftPanelEl, btnMobileLeft], ["right", rightPanelEl, btnMobileRight]].forEach(([key, el, btn]) => {
+          const open = key === name;
+          el.classList.toggle("hidden", !open);
+          el.classList.toggle("flex", open);
+          if (btn) btn.classList.toggle("nav-btn-active", open);
+        });
+        applyViewOffset();
+      }
+
+      btnMobileLeft.addEventListener("click", () => setSheet(openSheetName === "left" ? null : "left"));
+      btnMobileRight.addEventListener("click", () => setSheet(openSheetName === "right" ? null : "right"));
 
       renderMeridianFilters();
       renderAcupointList();
@@ -1621,6 +1758,11 @@
         }
 
         controls.update();
+
+        // Mô hình đang chuyển động dưới con trỏ → cập nhật lại tooltip để không bị "kẹt"
+        if (lastMouse && (controls.autoRotate || isCamAnimating)) {
+          updateHover(lastMouse.x, lastMouse.y);
+        }
 
         // Hiệu ứng nhịp thở / xung động nhẹ cho hào quang huyệt đang chọn
         if (selRing.visible) {
@@ -1663,6 +1805,17 @@
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
+        if (isDesktop()) {
+          // Desktop: panel luôn hiển thị theo CSS, bỏ trạng thái sheet
+          openSheetName = null;
+          btnMobileLeft.classList.remove("nav-btn-active");
+          btnMobileRight.classList.remove("nav-btn-active");
+          leftPanelEl.classList.remove("flex");
+          rightPanelEl.classList.remove("flex");
+          leftPanelEl.classList.add("hidden");
+          rightPanelEl.classList.add("hidden");
+        }
+        applyViewOffset();
       });
     };
   </script>
